@@ -4,7 +4,7 @@ title: Cartasy Engineering Standards
 status: accepted
 owner: Cartasy Engineering
 last_updated: 2026-10-19
-version: 4.3.0
+version: 4.4.0
 source_of_truth: Cấu trúc source code, dependency direction và quy ước phát triển
 review_cycle: Khi đổi module, framework hoặc tooling
 ---
@@ -221,8 +221,9 @@ packages/
     src/env/{api,worker,web,admin}.ts # parser theo process, public env allowlist
     src/presets/                  # tsconfig/eslint/build preset
   ui/
-    src/tokens/                   # màu, typography, spacing
-    src/primitives/               # accessible input/dialog/button...
+    components.json               # shadcn CLI aliases cho package
+    src/styles/                   # Tailwind import, token/theme foundation
+    src/components/ui/            # shadcn/ui bản Radix, accessible primitive
     src/patterns/                 # composition thật sự dùng nhiều app
   observability/
     src/logging/                  # Pino/redaction/context
@@ -255,7 +256,7 @@ Cây `src`, route, state, API integration, biến môi trường và lệnh setu
 - SQL query parameterized; quan hệ/hot query có index và query plan. Domain không dùng floating point cho tiền.
 - Command thay đổi state; query không có side effect. Network call không ở trong transaction checkout.
 - Mọi public API, migration, event schema, UI state và tài liệu liên quan cập nhật cùng feature.
-- Prettier là formatter duy nhất; ESLint và dependency-cruiser chặn layer violation/cycle. Không tắt rule ở phạm vi toàn project để sửa một lỗi.
+- Prettier là formatter duy nhất; Husky/lint-staged format staged source, CI chạy `format:check`. ESLint và dependency-cruiser chặn layer violation/cycle. Không tắt rule ở phạm vi toàn project để sửa một lỗi. Web/Admin dùng Zustand cho UI state theo feature/widget và React Query cho API state; [ADR-0013](../decisions/ADR-0013-frontend-state-ui-tooling.md).
 
 ## 8. Cách thêm capability
 

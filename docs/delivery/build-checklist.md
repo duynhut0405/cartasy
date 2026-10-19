@@ -4,7 +4,7 @@ title: Cartasy Build Checklist
 status: accepted
 owner: Product & Engineering
 last_updated: 2026-10-19
-version: 4.3.0
+version: 4.4.0
 source_of_truth: Công việc triển khai, gate và bằng chứng
 ---
 
@@ -14,7 +14,7 @@ source_of_truth: Công việc triển khai, gate và bằng chứng
 
 ## F0 — Foundation
 
-- [ ] `F0-01` Pin Node/pnpm/TypeScript/framework/runtime exact, workspace/lockfile, peer compatibility và **bốn process Web/Admin/API/Worker** build độc lập; Seller/Platform cùng `apps/admin`.
+- [ ] `F0-01` Pin Node/pnpm/TypeScript/framework/runtime exact, workspace/lockfile, peer compatibility và **bốn process Web/Admin/API/Worker** build độc lập; Seller/Platform cùng `apps/admin`; Prettier + Tailwind plugin/Husky/lint-staged format source, CI `format:check`.
 - [ ] `F0-02` Shared packages public exports, domain/application/adapter boundary, dependency-cruiser và no-cycle/no-deep-import gate.
 - [ ] `F0-03` PostgreSQL/Mailpit/S3 local, typed env/secret, health/readiness, migration clean+upgrade và seed **hai shop/hai seller/hai buyer** có quyền media.
 - [ ] `F0-04` Better Auth verification/reset/session revoke, MFA Seller/Platform Admin, RBAC/shop capability/ABAC, `GET /v1/portal/context`, CSRF/CORS/Origin và object-level test cùng Admin origin.
@@ -22,7 +22,7 @@ source_of_truth: Công việc triển khai, gate và bằng chứng
 - [ ] `F0-06` UnitOfWork, transactional outbox/inbox dedupe, background jobs/lease/checkpoint, fake clock và dead-letter replay audit.
 - [ ] `F0-07` CI frozen install, lint/typecheck/build/unit/integration/E2E/contract/migration/security/docs link; staging deploy và rollback path.
 - [ ] `F0-08` Máy sạch cài từ lockfile, migrate/seed, bật bốn process, smoke auth/tenant/health/OpenAPI và Seller/Platform workspace.
-- [ ] `F0-09` Web `[locale]`/`next-intl`/message namespace, UI kit token/primitive/layout và kiểm parity `vi`/`en`; URL `/` chuyển locale đúng.
+- [ ] `F0-09` Web `[locale]`/`next-intl`/message namespace, shared shadcn/ui **Radix** + Tailwind token/primitive/layout cho Web/Admin, Zustand UI store theo owner và React Query server state; kiểm parity `vi`/`en`, URL `/` chuyển locale đúng, store/cache reset khi đổi actor/shop.
 
 ## F1 — Buyer/Seller/Admin Marketplace MVP
 

@@ -4,7 +4,7 @@ title: Cartasy Tech Stack and Dependencies
 status: accepted
 owner: Cartasy Engineering
 last_updated: 2026-10-19
-version: 4.3.0
+version: 4.4.0
 source_of_truth: Toolchain, thư viện bắt buộc, version policy và compatibility gate
 review_cycle: Mỗi lần nâng major hoặc đổi runtime
 ---
@@ -25,8 +25,8 @@ NestJS 12/Better Auth Express chạy ESM. `apps/api` phải mount Better Auth ha
 | Ngôn ngữ | `typescript`, `@types/node` | Strict ESM, typecheck độc lập |
 | Web/Admin chung Seller-Platform | `next`, `react`, `react-dom` | SSR, App Router, SEO và UI |
 | Web i18n | `next-intl` | `/[locale]`, UI messages, navigation/formatting; pin exact patch tương thích Next 16 khi scaffold, kiểm peer/build cả hai locale |
-| UI | `tailwindcss`, `@tailwindcss/postcss`, `@radix-ui/react-dialog`, `@radix-ui/react-alert-dialog`, `@radix-ui/react-checkbox`, `@radix-ui/react-radio-group`, `@radix-ui/react-select`, `@radix-ui/react-tabs`, `@radix-ui/react-label`, `@radix-ui/react-slot`, `lucide-react` | Token/primitive accessible; chỉ cài package được component thực tế dùng |
-| Client data | `@tanstack/react-query`, `openapi-fetch` | Cache server state ở Client Component, typed HTTP client |
+| UI | `tailwindcss`, `@tailwindcss/postcss`, `postcss`, shadcn/ui CLI (dev), Radix primitive và utility dependency theo component được chọn, `lucide-react` | Web/Admin dùng component source từ shadcn/ui bản Radix trong `@cartasy/ui`; Tailwind utilities cho layout/visual; chỉ cài dependency thực tế dùng |
+| Client state/data | `zustand`, `@tanstack/react-query`, `openapi-fetch` | Zustand cho UI state dùng chung; React Query cho server state; typed HTTP client; URL giữ state có thể chia sẻ |
 | Form | `react-hook-form`, `@hookform/resolvers`, `zod` | Form state và client validation; server vẫn validate độc lập |
 | API | `@nestjs/common`, `@nestjs/core`, `@nestjs/platform-express`, `@nestjs/swagger`, `reflect-metadata`, `rxjs` | HTTP, module DI và OpenAPI |
 | API validation | `class-validator`, `class-transformer` | DTO boundary, allowlist/whitelist; không dùng DTO làm domain model |
@@ -40,12 +40,12 @@ NestJS 12/Better Auth Express chạy ESM. `apps/api` phải mount Better Auth ha
 | Logging | `pino` | Structured log có redaction; OpenTelemetry SDK chỉ thêm khi trace sink được chọn |
 | Unit/integration | `vitest`, `@nestjs/testing`, `supertest` | Domain, HTTP và PostgreSQL integration |
 | Browser | `@playwright/test` | E2E Web và Admin với Seller/Platform role |
-| Quality | `eslint`, `typescript-eslint`, `eslint-config-next`, `prettier`, `prettier-plugin-tailwindcss`, `dependency-cruiser`, `knip` | Lint/format, dependency boundary, unused export |
+| Quality | `eslint`, `typescript-eslint`, `eslint-config-next`, `prettier`, `prettier-plugin-tailwindcss`, `husky`, `lint-staged`, `dependency-cruiser`, `knip` | Prettier format source và sort Tailwind class; Husky pre-commit gọi lint-staged; CI kiểm format/lint/boundary/unused export |
 | Security | `secretlint`, `pnpm audit` | Secret/dependency scan trong CI |
 
 Dev type packages theo consumer: `@types/react`, `@types/react-dom`, `@types/pg`, `@types/nodemailer` và `@types/supertest`. Chỉ khai báo dependency trực tiếp ở workspace dùng nó; `drizzle-kit`, `openapi-typescript`, test/lint/formatter là dev dependency, không đưa vào runtime image.
 
-Không dùng Redis/BullMQ, search engine, FCM, WebSocket server, payment SDK thật, carrier SDK hoặc state library toàn cục trong **F1 baseline**. Ad billing provider SDK/partner affiliate API sau MVP là quyết định riêng theo hợp đồng và [ADR-0010](../decisions/ADR-0010-simulated-commerce-real-monetization-boundary.md); không thêm vào runtime F1 hoặc mock checkout. PostgreSQL outbox polling, React Query và URL state đáp ứng F1. Nếu dùng component generator, commit code được sinh và review như code thường; không coi generator là runtime dependency.
+Không dùng Redis/BullMQ, search engine, FCM, WebSocket server, payment SDK thật hoặc carrier SDK trong **F1 baseline**. Ad billing provider SDK/partner affiliate API sau MVP là quyết định riêng theo hợp đồng và [ADR-0010](../decisions/ADR-0010-simulated-commerce-real-monetization-boundary.md); không thêm vào runtime F1 hoặc mock checkout. Zustand không là nguồn dữ liệu API, quyền, giá hay giao dịch. shadcn/ui là công cụ tạo source, không là runtime UI package; pin CLI khi scaffold, chọn rõ bản **Radix** (CLI hiện có mặc định khác), commit và review component được sinh. [ADR-0013](../decisions/ADR-0013-frontend-state-ui-tooling.md), [shadcn monorepo](https://ui.shadcn.com/docs/monorepo), [chọn Radix](https://ui.shadcn.com/docs/changelog/2026-07-base-ui-default).
 
 Các lựa chọn dựa trên khả năng được tài liệu chính thức mô tả: [NestJS modules](https://docs.nestjs.com/first-steps), [Drizzle migrations](https://orm.drizzle.team/docs/migrations), [NestJS OpenAPI](https://docs.nestjs.com/openapi/introduction), [OpenAPI Fetch](https://openapi-ts.dev/openapi-fetch/), [Better Auth](https://better-auth.com/docs/installation) và [pnpm 12](https://pnpm.io/installation).
 

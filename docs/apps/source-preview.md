@@ -4,7 +4,7 @@ title: Preview source, thư viện, module và state/store Cartasy
 status: accepted
 owner: Cartasy Engineering
 last_updated: 2026-10-19
-version: 4.3.0
+version: 4.4.0
 source_of_truth: Bản đồ đọc nhanh của các app/package; chi tiết do app guides, source architecture và stack sở hữu
 ---
 
@@ -14,8 +14,8 @@ source_of_truth: Bản đồ đọc nhanh của các app/package; chi tiết do 
 
 | Source | Framework và thư viện nổi bật | State/store chính |
 |---|---|---|
-| `apps/web/src` | Next/React, `next-intl`, React Query, OpenAPI Fetch, React Hook Form/Zod, UI kit | URL + React local + React Query; guest cart `localStorage`; checkout attempt `sessionStorage` |
-| `apps/admin/src` | Next/React, React Query, OpenAPI Fetch, React Hook Form/Zod, UI kit | URL + React local + React Query theo actor/workspace/shop; API giữ quyền |
+| `apps/web/src` | Next/React, `next-intl`, Zustand, React Query, OpenAPI Fetch, React Hook Form/Zod, shadcn/ui Radix + Tailwind | URL + React local + Zustand cho UI dùng chung + React Query; guest cart `localStorage`; checkout attempt `sessionStorage` |
+| `apps/admin/src` | Next/React, Zustand, React Query, OpenAPI Fetch, React Hook Form/Zod, shadcn/ui Radix + Tailwind | URL + React local + Zustand cho workspace UI + React Query theo actor/workspace/shop; API giữ quyền |
 | `apps/api/src` | Nest/Express, Better Auth, DTO validation, Swagger | Request/DI tạm; business state ở PostgreSQL qua `server`/`database` |
 | `apps/worker/src` | Nest application context, Nodemailer, Web Push, S3 adapter | PostgreSQL outbox/inbox/jobs; object storage cho media |
 | `packages/*/src` | Pure TypeScript domain, Drizzle/pg, generated contract, React UI, Zod config, Pino | PostgreSQL là nguồn nghiệp vụ; package chỉ giữ contract/adapter/token |
@@ -41,7 +41,7 @@ apps/admin ────┘                  │
 | Khu vực | Module/thư viện chính | State/store |
 |---|---|---|
 | `proxy.ts`, `i18n/*`, `app/[locale]/*`, `messages/{vi,en}` | Next.js App Router, React, `next-intl`; `/vi` và `/en`, metadata/sitemap | Locale và search/filter/sort/cursor ở URL; public Server Component fetch/cache có key theo locale |
-| `widgets/*`, `entities/*`, `shared/ui/*` | `@cartasy/ui`, Tailwind CSS, Radix primitive cần dùng, `lucide-react` | Props từ API; tab/dialog/selection tạm trong React component |
+| `widgets/*`, `entities/*`, `shared/ui/*` | `@cartasy/ui` chứa shadcn/ui bản Radix, Tailwind CSS, `lucide-react` | Props từ API; UI local ở React, UI dùng chung trong feature/widget ở Zustand |
 | `features/discovery`, `product-detail`, `wishlist`, `order-history`, `reviews`, `returns`, `support`, `account`, `notifications` | React, `@tanstack/react-query`, `openapi-fetch`, `@cartasy/contracts` | React Query cache cho response/mutation; query key có actor/resource/filter/locale khi chứa text |
 | `features/cart`, `checkout`, `payment-result` | React Query, `react-hook-form`, `zod`, `@hookform/resolvers` | Guest cart IDs/qty trong `localStorage` versioned; cart/order Buyer ở API/PostgreSQL; form local; opaque checkout idempotency key trong `sessionStorage` theo **một attempt** |
 | `shared/api`, `auth`, `realtime`, `config`, `styles`, `public/sw.js` | Typed API client, browser `EventSource`, Push/Notification API, VAPID public key | Session cookie `HttpOnly` do API quản lý; SSE chỉ báo refetch; Web Push subscription do API lưu |
@@ -53,10 +53,10 @@ Luồng UI: `app` compose `widgets/features`; `features` dùng `entities/shared`
 | Khu vực | Module/thư viện chính | State/store |
 |---|---|---|
 | `app/(auth)`, `(workspace)`, `(seller)/seller/*`, `(platform)/platform/*` | Next.js App Router/React; một source tree, một origin | URL giữ workspace/shop/resource/filter/cursor; quyền được kiểm lại ở API |
-| `widgets/workspace-shell`, `seller-shell`, `platform-shell`, `filter-toolbar`, `audit-diff`, `translation-editor` | `@cartasy/ui`, Tailwind, Radix, icon | Shell/menu theo context từ `/v1/portal/context`; không là bằng chứng cấp quyền |
+| `widgets/workspace-shell`, `seller-shell`, `platform-shell`, `filter-toolbar`, `audit-diff`, `translation-editor` | `@cartasy/ui` chứa shadcn/ui bản Radix, Tailwind, icon, Zustand | Sidebar/panel UI ở Zustand; shell/menu theo context từ `/v1/portal/context`, không là bằng chứng cấp quyền |
 | Seller features: onboarding, shop switch/profile/membership, product proposal, listing/inventory/order, promotion, notification proposal, support/return/review, reporting | React Query, `openapi-fetch`, generated contracts; React Hook Form/Zod cho form | Query key có actor + workspace + shop ID + membership/capability version; đổi shop hủy request/stream và clear private cache/form |
 | Platform features: catalog/listing/inventory/promotion/order/return/review/risk/support, shop governance, CMS/campaign, reporting, access, operations | Cùng typed client/form/UI kit; API `/v1/admin/*` theo capability | Draft form local, `If-Match`/version cho mutation; server lưu dữ liệu và audit; không optimistic update cho action nhạy cảm |
-| `shared/api`, `auth`, `realtime`, `config`, `ui`, `styles` | React Query, `EventSource`, API cookie/session | Session và capability do API quyết định; không lưu authority trong localStorage |
+| `shared/api`, `providers`, `auth`, `realtime`, `config`, `ui` | React Query, Zustand, `EventSource`, API cookie/session | Session và capability do API quyết định; không lưu authority trong localStorage/Zustand |
 
 Admin hiện **không có app Seller riêng**. Bản dịch catalog/shop/CMS được biên tập tại đây; route Admin `/seller/*`/`/platform/*` không cần locale prefix SEO. Dịch UI Admin bằng `next-intl` là khả năng mở rộng trong app hiện có, chưa là dependency bắt buộc của F1. [Cấu trúc đầy đủ](admin/README.md).
 
@@ -90,7 +90,7 @@ Worker không có HTTP public. SMTP/Push/S3 gọi ngoài transaction; event xử
 | `@cartasy/server` | `modules/<context>/{domain,application,ports,public.ts}`, `platform/{clock,ids,transaction,errors}` | TypeScript thuần cho rule/use case/authorization; entity trong một operation, lưu bền qua port chứ không qua singleton store |
 | `@cartasy/database` | `client`, `schema`, `repositories`, `read-models`, `migrations`, `seed` | `drizzle-orm`/`pg`, `drizzle-kit` dev; PostgreSQL là nguồn giao dịch, search F1 dùng PostgreSQL full-text/trigram |
 | `@cartasy/contracts` | `openapi`, `generated`, `client`, `events` | `openapi-typescript` dev sinh type từ API; wire schema, không có state |
-| `@cartasy/ui` | `tokens`, `primitives`, `patterns` | React/Radix/Tailwind token và accessible primitive; nhận translated copy qua props, không gọi API |
+| `@cartasy/ui` | `styles`, `components/ui`, `patterns` | Source shadcn/ui bản Radix + Tailwind token và accessible primitive; nhận translated copy qua props, không gọi API |
 | `@cartasy/config` | `env/{api,worker,web,admin}`, `presets` | Zod parse env, public/server allowlist; không là runtime state store |
 | `@cartasy/observability` | `logging`, `metrics`, `tracing` | Pino/redaction và correlation; metric/log không là nguồn nghiệp vụ |
 | `@cartasy/testkit` | `builders`, `clock`, `fixtures` | Fixture/fake clock chỉ cho test, không đưa runtime image |
@@ -102,23 +102,23 @@ Worker không có HTTP public. SMTP/Push/S3 gọi ngoài transaction; event xử
 | Dữ liệu | Nguồn chuẩn | Bản sao phục vụ UI/xử lý |
 |---|---|---|
 | Locale, search/filter/sort/cursor, workspace route | URL `Web /[locale]` hoặc Admin route | Next router; query key có locale/filter thích hợp |
-| Tab/dialog/variant đang chọn, input form | React component / React Hook Form | Mất khi rời luồng; không là giá hoặc quyền chính thức |
+| Tab/dialog/variant đang chọn, input form | React component / React Hook Form; Zustand khi nhiều component cùng feature/widget cần UI state | Không là giá hoặc quyền chính thức; reset UI store khi đổi actor/workspace/shop |
 | Public/private response từ API | Owner use case + PostgreSQL | Server Component public cache hoặc React Query; private cache xóa khi logout/đổi actor/shop |
 | Guest cart | Browser `localStorage` adapter versioned, chỉ listing ID/quantity | Merge idempotent vào server cart khi login; không là nguồn giá/stock/PII |
 | Checkout attempt key | `sessionStorage` theo actor/cart attempt; PostgreSQL idempotency record là nguồn xử lý | Giữ opaque key qua refresh/timeout, lookup kết quả trước khi clear; không lưu quote/payment detail ở browser |
 | Quote/giá hiện tại | `packages/server` tính từ listing/stock/promotion/policy trong PostgreSQL | Response/fingerprint tạm ở UI để xác nhận; checkout tính và kiểm lại, không lấy tổng từ client |
-| Buyer cart, order, payment, stock, consent, quyền | `packages/server` rule + PostgreSQL qua `database` | UI chỉ đọc/gửi command; không có Redux/Zustand làm nguồn chính thức |
+| Buyer cart, order, payment, stock, consent, quyền | `packages/server` rule + PostgreSQL qua `database` | UI chỉ đọc/gửi command; Zustand không sao chép các dữ liệu này |
 | Session | Better Auth ở API + `HttpOnly` cookie | Web/Admin gọi API với `credentials: include` |
 | Event, job, retry, delivery | PostgreSQL outbox/inbox/background jobs | Worker poll/lease/dedupe; SSE chỉ hint cho client refetch |
 | Media binary | Private S3-compatible object storage | PostgreSQL giữ key/metadata/quyền; signed URL ngắn hạn |
 
-MVP không chọn Redux/Zustand, Redis/BullMQ, WebSocket server, FCM hay search engine ngoài PostgreSQL. Nếu phát sinh nhu cầu sau đo tải, phải có ADR/contract/gate tương ứng; không thêm một store thứ hai chỉ để tránh truyền props hoặc dùng React Query.
+MVP chọn Zustand có giới hạn cho UI state dùng chung của Web/Admin; không dùng Redux, Redis/BullMQ, WebSocket server, FCM hay search engine ngoài PostgreSQL. React Query tiếp tục giữ server state; Zustand store không chứa response cache hoặc authority. Không viết CSS thuần/CSS Modules ở feature/page; shadcn/ui bản Radix và Tailwind token/utilities là baseline. Prettier + `prettier-plugin-tailwindcss` format source, Husky/lint-staged chạy trên staged source, CI chạy `format:check`. [ADR-0013](../decisions/ADR-0013-frontend-state-ui-tooling.md).
 
 ## Tooling và test gắn với source
 
 | Source | Dev/test dependency và gate chính |
 |---|---|
-| Root workspace | `pnpm`, `turbo`, TypeScript strict, ESLint/Prettier, `dependency-cruiser`, `knip`, `secretlint`; frozen lockfile và boundary check |
+| Root workspace | `pnpm`, `turbo`, TypeScript strict, ESLint/Prettier + Tailwind plugin, Husky/lint-staged, `dependency-cruiser`, `knip`, `secretlint`; frozen lockfile và boundary check |
 | Web/Admin | `eslint-config-next`, Vitest/component test khi cần, `@playwright/test` ở `tests/e2e` cho hai locale, checkout và cross-role/shop; build độc lập |
 | API | `@nestjs/testing`, `supertest`, Vitest, PostgreSQL integration, OpenAPI/`openapi-typescript` drift và auth route snapshot |
 | Worker | Vitest + PostgreSQL integration/fake clock: event trùng, lease/retry/dead-letter, mock settlement và delivery |

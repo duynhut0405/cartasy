@@ -4,7 +4,7 @@ title: Cartasy Testing and Quality Strategy
 status: accepted
 owner: Cartasy Engineering & Product
 last_updated: 2026-10-19
-version: 4.3.0
+version: 4.4.0
 source_of_truth: Test layer, ma trận rủi ro và release gate
 review_cycle: Mỗi milestone và sau sự cố nghiêm trọng
 ---
@@ -19,7 +19,7 @@ Kiểm tra rule ở tầng thấp nhất chứng minh được, nhưng checkout/
 
 | Tầng | Nội dung |
 |---|---|
-| Static | Format, ESLint, TypeScript strict, dependency direction/cycle, unused export, secret/dependency scan |
+| Static | `format:check` (Prettier + Tailwind class order), ESLint, TypeScript strict, dependency direction/cycle, unused export, secret/dependency scan; Husky/lint-staged chỉ hỗ trợ local, CI là gate |
 | Unit | Money integer, price/discount allocation, state machine, authorization policy, quote fingerprint, content validation |
 | Integration | PostgreSQL constraint/lock/transaction, reservation, order split, idempotency, outbox/inbox, migration, object storage/SMTP adapter |
 | Contract | OpenAPI/controller/DTO/generated client drift, stable error, pagination, auth provider snapshot |
@@ -54,6 +54,7 @@ Không test chỉ bằng mock repository cho invariant transaction; dùng Postgr
 | Web Push/SSE | Permission denied/iOS Home Screen fallback, subscription 410 cleanup, SSE disconnect/replay/cross-user, no PII payload |
 | CMS | Draft/review/schedule/publish/rollback, XSS, unpublish shop/product, cache invalidation |
 | I18n Web | Route `/vi`/`/en`, locale negotiation/unsupported locale, message key + ICU placeholder parity, localized content/slug uniqueness, unpublished translation 404, locale switch, canonical/hreflang/sitemap, cache/search isolation, translated simulation notice, long text/mobile/a11y |
+| Frontend UI/store | shadcn/ui bản Radix + Tailwind token ở Web/Admin, keyboard/focus/contrast; Zustand chỉ giữ UI state dùng chung, reset khi logout/đổi actor/workspace/shop; React Query không lộ cache actor/shop cũ, URL giữ filter/cursor; hydration không đọc server singleton |
 | Reporting | Two-shop isolation, projection rebuild/lag/asOf, refund reconciliation, no real GMV label |
 
 ## 3. Ma trận luồng trọng yếu

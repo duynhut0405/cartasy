@@ -2,7 +2,7 @@
 
 ## Nguồn chuẩn
 
-[docs/README.md](docs/README.md) là bản đồ Single Source of Truth 4.1. Đọc tài liệu sở hữu trước khi thiết kế/code; code hiện trạng chỉ là bằng chứng triển khai. Nếu code khác đặc tả, ghi chênh lệch và chuyển đổi có migration/test. Không biến đơn Cartasy mô phỏng thành giao dịch/giao hàng thật hoặc phục hồi credit/ví; quảng cáo có thể thu tiền thật và affiliate có thể dẫn mua thật trên đối tác **sau MVP**, qua boundary/gate riêng ở [ADR-0010](docs/decisions/ADR-0010-simulated-commerce-real-monetization-boundary.md).
+[docs/README.md](docs/README.md) là bản đồ Single Source of Truth 4.4.0. Đọc tài liệu sở hữu trước khi thiết kế/code; code hiện trạng chỉ là bằng chứng triển khai. Nếu code khác đặc tả, ghi chênh lệch và chuyển đổi có migration/test. Không biến đơn Cartasy mô phỏng thành giao dịch/giao hàng thật hoặc phục hồi credit/ví; quảng cáo có thể thu tiền thật và affiliate có thể dẫn mua thật trên đối tác **sau MVP**, qua boundary/gate riêng ở [ADR-0010](docs/decisions/ADR-0010-simulated-commerce-real-monetization-boundary.md).
 
 ## Thứ tự đọc và setup
 

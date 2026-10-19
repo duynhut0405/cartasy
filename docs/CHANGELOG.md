@@ -4,12 +4,14 @@ title: Cartasy Documentation Baseline
 status: accepted
 owner: Cartasy Product & Engineering
 last_updated: 2026-10-19
-version: 4.3.0
+version: 4.4.0
 source_of_truth: Tóm tắt bộ tài liệu chuẩn hiện hành
 review_cycle: Khi có thay đổi phạm vi hoặc quyết định nền
 ---
 
-# Bộ tài liệu hiện hành — 4.3.0
+# Bộ tài liệu hiện hành — 4.4.0
+
+- Web/Admin chọn Zustand cho UI state dùng chung theo feature/widget; React Query giữ API state và URL giữ state có thể chia sẻ. Component nền dùng shadcn/ui bản Radix trong `@cartasy/ui`, style bằng Tailwind/token; Prettier + Husky/lint-staged format source, CI kiểm `format:check`. [ADR-0013](decisions/ADR-0013-frontend-state-ui-tooling.md).
 
 - Marketplace đa seller ngay F1. Buyer dùng Web; Seller và Platform Admin dùng chung **một `apps/admin`** với khu `/seller/*` và `/platform/*`. API kiểm RBAC, shop capability và ABAC trên từng tài nguyên. Backend gồm API và Worker.
 - Web F1 dùng `next-intl` với route `/[locale]` (`vi`/`en`); UI/design structure, nội dung catalog/shop/CMS, API/cache/SEO và notification theo locale. [ADR-0012](decisions/ADR-0012-multilingual-storefront.md).

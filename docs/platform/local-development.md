@@ -4,7 +4,7 @@ title: Local development và bootstrap workspace
 status: accepted
 owner: Developer Experience
 last_updated: 2026-10-19
-version: 4.3.0
+version: 4.4.0
 source_of_truth: Thứ tự setup chung, cổng và lệnh workspace
 ---
 
@@ -18,8 +18,8 @@ Node 24.22.0, pnpm 12.11.2, Docker/Compose, PostgreSQL 18, Mailpit, S3-compatibl
 
 ## Thứ tự bootstrap từ workspace trống
 
-1. Tạo root `package.json` private ESM, `pnpm-workspace.yaml` (`apps/*`/`packages/*`), `.node-version`, `turbo.json`, strict TS base, ESLint, Prettier, dependency-cruiser và `pnpm-lock.yaml`. Pin exact patch/peer-compatible từ [stack](stack-dependencies.md); `pnpm install --frozen-lockfile` sau khi có lock.
-2. Tạo `packages/config`, `contracts`, `ui`, `observability`, `testkit`, `server`, `database` và public exports. Tạo `apps/api`, `worker`, `web`, `admin` theo app guides ngay F0; `/seller/*` và `/platform/*` ở cùng `apps/admin`.
+1. Tạo root `package.json` private ESM, `pnpm-workspace.yaml` (`apps/*`/`packages/*`), `.node-version`, `turbo.json`, strict TS base, ESLint, Prettier + Tailwind plugin, Husky/lint-staged, dependency-cruiser và `pnpm-lock.yaml`. Pin exact patch/peer-compatible từ [stack](stack-dependencies.md); `pnpm install --frozen-lockfile` sau khi có lock.
+2. Tạo `packages/config`, `contracts`, `ui`, `observability`, `testkit`, `server`, `database` và public exports. Tạo `apps/api`, `worker`, `web`, `admin` theo app guides ngay F0; `/seller/*` và `/platform/*` ở cùng `apps/admin`. Cấu hình `components.json` ở `packages/ui`, `apps/web`, `apps/admin`, aliases trỏ shared component về `@cartasy/ui`; pin shadcn CLI, chọn bản Radix rõ ràng (flag `-b radix` khi init), commit component source đã sinh. CSS app chỉ là Tailwind/theme entry, feature/page dùng utilities.
 3. Tạo `infra/compose` cho PostgreSQL/Mailpit/object store có healthcheck và pinned image; `docker compose up -d`. Tạo `.env.example` chỉ tên biến/giá trị local vô hại; copy thành `.env.local` riêng mỗi app, secret không commit.
 4. Tạo DB schema/migrations theo [migrations](database-migrations.md), apply vào DB sạch và seed hai shop độc lập/hai seller, category/product/variant/listing/demo buyer/admin **chỉ local**. Không seed review/order giả như sự kiện thật.
 5. Chạy API + Worker rồi Web/Admin; kiểm tra health/readiness, Mailpit, object store. Seed bản `vi` và ít nhất một product/CMS bản `en` đã publish cùng một bản `en` chưa publish. Smoke `/vi`/`/en`, locale switch/404, auth cookie/login/MFA, Seller và Platform workspace, catalog, cart, checkout, payment success/failure/timeout, notifications, order, return/support.
@@ -32,7 +32,7 @@ Node 24.22.0, pnpm 12.11.2, Docker/Compose, PostgreSQL 18, Mailpit, S3-compatibl
 | `dev`, `dev:web/admin/api/worker` | Chạy từng process hoặc tất cả có log riêng |
 | `db:generate`, `db:migrate`, `db:seed`, `db:check` | SQL migration, apply, seed local/test, drift/upgrade check |
 | `api:generate`, `api:check` | OpenAPI và generated type, kiểm drift |
-| `format`, `format:check`, `lint`, `typecheck` | Static quality/architecture |
+| `format`, `format:check`, `lint`, `typecheck` | Prettier format/check source, Tailwind class order, ESLint và architecture boundary |
 | `test`, `test:integration`, `test:e2e` | Domain, PostgreSQL/HTTP, browser |
 | `build`, `check` | Build độc lập và gate tổng |
 
@@ -50,9 +50,15 @@ Mỗi workspace có script tương ứng; dùng `pnpm --filter @cartasy/<app> <s
   "scripts": {
     "dev": "turbo run dev --parallel",
     "build": "turbo run build",
+    "prepare": "node .husky/install.mjs",
+    "format": "prettier --write \"apps/**/src/**/*.{ts,tsx,js,jsx,json,css,md}\" \"packages/**/src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "format:check": "prettier --check \"apps/**/src/**/*.{ts,tsx,js,jsx,json,css,md}\" \"packages/**/src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test"
+  },
+  "lint-staged": {
+    "**/src/**/*.{ts,tsx,js,jsx,json,css,md}": "prettier --write --ignore-unknown"
   }
 }
 ```
@@ -76,7 +82,27 @@ packages:
 }
 ```
 
-Lưu lần lượt thành `package.json`, `pnpm-workspace.yaml` và `turbo.json`; thêm các script database/API/quality gate ở trên trước khi đánh dấu `F0-01`. Server TS dùng `module/moduleResolution: NodeNext`, `experimentalDecorators` và `emitDecoratorMetadata` cho Nest; Next dùng `moduleResolution: Bundler` theo generator. Mọi workspace bật `strict` và `noUncheckedIndexedAccess`. API/worker xuất ESM thật, không trộn CommonJS output. Cài dependency theo bảng, tạo lockfile, rồi dùng `pnpm install --frozen-lockfile` trong CI. Cài browser E2E một lần bằng `pnpm exec playwright install chromium` và engine thứ hai được chọn cho release.
+Lưu lần lượt thành `package.json`, `pnpm-workspace.yaml` và `turbo.json`; thêm các script database/API/quality gate ở trên trước khi đánh dấu `F0-01`. Root `prettier.config.mjs` bật `prettier-plugin-tailwindcss` và trỏ `tailwindStylesheet` tới `./packages/ui/src/styles/globals.css` để class theo Tailwind 4 được sắp thứ tự đúng. `.husky/pre-commit` gọi `pnpm exec lint-staged`; `.husky/install.mjs` chỉ import/chạy Husky khi có dev dependencies và không ở CI/production, tránh lỗi install runtime image. Hook chỉ format file source đã stage, không thay CI: `pnpm format:check` nằm trong `pnpm check` và chạy trong pull request. [Prettier pre-commit](https://prettier.io/docs/precommit), [Tailwind plugin](https://github.com/tailwindlabs/prettier-plugin-tailwindcss#readme), [Husky](https://typicode.github.io/husky/get-started.html). Server TS dùng `module/moduleResolution: NodeNext`, `experimentalDecorators` và `emitDecoratorMetadata` cho Nest; Next dùng `moduleResolution: Bundler` theo generator. Mọi workspace bật `strict` và `noUncheckedIndexedAccess`. API/worker xuất ESM thật, không trộn CommonJS output. Cài dependency theo bảng, tạo lockfile, rồi dùng `pnpm install --frozen-lockfile` trong CI. Cài browser E2E một lần bằng `pnpm exec playwright install chromium` và engine thứ hai được chọn cho release.
+
+```js
+// prettier.config.mjs
+export default {
+  plugins: ['prettier-plugin-tailwindcss'],
+  tailwindStylesheet: './packages/ui/src/styles/globals.css',
+};
+```
+
+```js
+// .husky/install.mjs
+if (process.env.CI === 'true' || process.env.NODE_ENV === 'production') process.exit(0);
+const husky = (await import('husky')).default;
+husky();
+```
+
+```sh
+# .husky/pre-commit
+pnpm exec lint-staged
+```
 
 
 ## Environment contract

@@ -4,7 +4,7 @@ title: Cartasy UI Design System
 status: accepted
 owner: Cartasy Design & Product
 last_updated: 2026-10-19
-version: 4.3.0
+version: 4.4.0
 source_of_truth: Token, component, nội dung, responsive và accessibility
 review_cycle: Khi thay đổi brand hoặc interaction pattern
 ---
@@ -37,7 +37,7 @@ Spacing 4/8/12/16/24/32/48/64 px; radius 8/12/16 px; touch target tối thiểu 
 
 ### Tổ chức file thiết kế và ownership
 
-`packages/ui` sở hữu token/foundation, primitive accessible và recipe dùng lại giữa Web/Admin. `apps/web/src/shared/ui` và `apps/admin/src/shared/ui` chỉ đặt adapter của app; domain visual ở `entities`, thao tác ở `features`, section ở `widgets`, route ở `app`. Không đặt `ProductCard`, `ListingSelector` hay logic quyền vào UI kit chung. Token có nhóm màu semantic, typography, spacing, radius, shadow, z-index, breakpoint/container và motion duration/easing; tên token mô tả vai trò thay vì màu cụ thể. CSS variables là source, Tailwind map vào variables. Brand/theme mới đổi token có kiểm contrast và visual regression.
+`packages/ui` sở hữu token/foundation và source component shadcn/ui bản **Radix** dùng chung giữa Web/Admin. Các UI control/primitive khởi tạo từ shadcn/ui, sau đó review và tùy biến trong repo; domain component là composition của primitive và semantic HTML, không cần tạo một component shadcn mới cho từng nghiệp vụ. `apps/web/src/shared/ui` và `apps/admin/src/shared/ui` chỉ đặt adapter của app; domain visual ở `entities`, thao tác ở `features`, section ở `widgets`, route ở `app`. Không đặt `ProductCard`, `ListingSelector` hay logic quyền vào UI kit chung. Token có nhóm màu semantic, typography, spacing, radius, shadow, z-index, breakpoint/container và motion duration/easing; tên token mô tả vai trò thay vì màu cụ thể. CSS variables là source, Tailwind map vào variables. App/page/feature dùng Tailwind utilities và token, không viết CSS thuần hoặc CSS Modules; CSS global chỉ cho Tailwind import, variables/theme và foundation thật sự cần thiết. Brand/theme mới đổi token có kiểm contrast và visual regression. [ADR-0013](../decisions/ADR-0013-frontend-state-ui-tooling.md).
 
 Mỗi component có contract: props/slots, size/variant, trạng thái default/hover/focus/disabled/loading/error/empty, responsive, keyboard/screen reader, và ví dụ text `vi`/`en`. Form primitive không tự xử lý API error; feature map lỗi theo field và summary. Layout template chuẩn: `StoreShell`, `AccountShell`, `AuthShell`, `SellerShell`, `PlatformShell`; shell cung cấp skip link, header/nav/breadcrumb/main/footer, không chứa business rule. Trang chỉ compose section và data; một section có spacing/container thống nhất qua recipe, không hardcode riêng mỗi page.
 

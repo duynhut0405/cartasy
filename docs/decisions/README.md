@@ -4,14 +4,14 @@ title: Cartasy Architecture Decisions
 status: accepted
 owner: Cartasy Engineering
 last_updated: 2026-10-19
-version: 4.3.0
+version: 4.4.0
 source_of_truth: Danh mục quyết định kỹ thuật có hiệu lực
 review_cycle: Khi thêm/thay ADR
 ---
 
 # Quyết định kiến trúc
 
-Các ADR dưới đây là quyết định nền cho tài liệu hiện hành. ADR-0010 giữ ranh giới monetization; ADR-0011 chốt một app quản trị cho Seller và Platform Admin; ADR-0012 chốt storefront đa ngôn ngữ. Khi đổi quyết định đã accepted, cập nhật nguồn sở hữu và các contract liên quan trong cùng thay đổi.
+Các ADR dưới đây là quyết định nền cho tài liệu hiện hành. ADR-0010 giữ ranh giới monetization; ADR-0011 chốt một app quản trị cho Seller và Platform Admin; ADR-0012 chốt storefront đa ngôn ngữ; ADR-0013 chốt frontend state/UI/tooling. Khi đổi quyết định đã accepted, cập nhật nguồn sở hữu và các contract liên quan trong cùng thay đổi.
 
 | ADR | Quyết định |
 |---|---|
@@ -26,3 +26,4 @@ Các ADR dưới đây là quyết định nền cho tài liệu hiện hành. A
 | [0010](ADR-0010-simulated-commerce-real-monetization-boundary.md) | Đơn Cartasy mô phỏng, ad billing/affiliate partner revenue có thể là tiền thật sau MVP, tách dữ liệu/gate |
 | [0011](ADR-0011-unified-admin-seller-workspace.md) | Một `apps/admin` cho Seller và Platform Admin; RBAC + shop capability + ABAC ở API |
 | [0012](ADR-0012-multilingual-storefront.md) | Web `/[locale]` dùng `next-intl`, nội dung dịch theo owner và public SEO theo bản published |
+| [0013](ADR-0013-frontend-state-ui-tooling.md) | Zustand chỉ cho UI state dùng chung, shadcn/ui bản Radix + Tailwind, Prettier/Husky format source |
