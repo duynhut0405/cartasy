@@ -3,8 +3,8 @@ doc_id: TECH-ARCH
 title: Cartasy System Architecture
 status: accepted
 owner: Architecture
-last_updated: 2026-10-19
-version: 4.2.0
+last_updated: 2026-10-20
+version: 4.2.1
 source_of_truth: Topology, bounded contexts, transaction, event/realtime/cache và scale
 ---
 
@@ -47,7 +47,7 @@ flowchart LR
 | `apps/worker` | Outbox/jobs, mock settlement, campaign fanout, SMTP/push, projection/scheduler | Business rule khác API, work item không idempotent |
 | `packages/server` | Domain/application/ports theo context | Import Nest/Drizzle/Next |
 | `packages/database` | Drizzle schema/repository/UnitOfWork/read model | Export DB client cho UI |
-| `packages/contracts/config/ui/observability/testkit` | Wire types, typed env, UI primitive, telemetry, test fixture | Chứa feature rule không có owner |
+| `packages/contracts/config/observability/testkit` | Wire types, typed env, telemetry, test fixture | Chứa feature rule không có owner |
 
 Frontend chỉ import public package exports. API/worker bind adapter vào public application ports. Database adapter có thể import port type từ server, server không biết database. Không module ghi trực tiếp bảng module khác; read model cross-context có thể join read-only. Có dependency-cruiser/ESLint architecture gate.
 

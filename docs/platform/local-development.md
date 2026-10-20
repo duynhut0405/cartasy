@@ -3,8 +3,8 @@ doc_id: PLATFORM-LOCAL
 title: Local development và bootstrap workspace
 status: accepted
 owner: Developer Experience
-last_updated: 2026-10-19
-version: 4.4.0
+last_updated: 2026-10-20
+version: 4.4.1
 source_of_truth: Thứ tự setup chung, cổng và lệnh workspace
 ---
 
@@ -16,11 +16,21 @@ Tài liệu này là quy trình **cần tạo** khi khởi tạo source từ b�
 
 Node 24.22.0, pnpm 12.11.2, Docker/Compose, PostgreSQL 18, Mailpit, S3-compatible object store. Cổng mặc định: Web 3000, Admin chung Seller/Platform 3001, API 3002, PG 5432, Mailpit SMTP/UI 1025/8025, object store API/console 9000/9001. Không có cổng Seller 3003. Nếu đổi cổng, cập nhật đồng thời origin, CORS, env và callback/auth URL. Local Web/Admin/API nên dùng host cùng site (localhost) để cookie API hoạt động; không trộn `localhost` với `127.0.0.1`. HTTPS/same-site sibling domains bắt buộc staging/production.
 
+## Làm việc trên nhiều máy
+
+Docker image chứa phần mềm, **không chứa dữ liệu PostgreSQL/object store đang ghi vào volume**. Commit Compose/Dockerfile, image reference đã pin, lockfile, SQL migration và seed; máy khác pull/build image từ cùng commit. Compose dùng named volume cho PostgreSQL và object store: dữ liệu còn sau `docker compose down` trên **máy đó**, nhưng `down --volumes` xóa volume và volume không tự đồng bộ sang máy khác. [Docker storage](https://docs.docker.com/engine/storage), [Compose down](https://docs.docker.com/reference/cli/docker/compose/down/).
+
+- **Máy mới, dữ liệu demo chuẩn:** clone/pull cùng commit → tạo env local từ `.env.example` → `pnpm install --frozen-lockfile` → `docker compose pull` và `docker compose up -d` → `pnpm db:migrate` → `pnpm db:seed` → chạy API/Worker/Web/Admin. Seed phải idempotent và có media fixture hợp lệ để hai máy dựng được cùng baseline. Đây là quy trình F0 cần hiện thực; repository hiện chưa có Compose/scripts để chạy ngay.
+- **Cần tiếp tục đúng trạng thái dữ liệu giữa các máy:** dùng **một PostgreSQL dev riêng cho người phát triển** và bucket dev tương ứng, truy cập từ cả hai máy bằng `DATABASE_URL`/S3 env riêng từng máy qua TLS và mạng giới hạn. Không dùng staging/production hoặc DB test/CI. Chỉ máy đang làm việc chạy Worker; dùng cùng commit/schema, chạy migration có kiểm soát một lần và backup trước thay đổi phá dữ liệu. Khởi tạo seed một lần trên DB rỗng, không tự reset/seed lại mỗi khi mở máy.
+- **Muốn giữ local và chuyển trạng thái khi cần:** tạm dừng API/Worker ghi dữ liệu, xuất `pg_dump` custom format, khôi phục bằng `pg_restore` vào DB rỗng ở máy đích; chuyển cả object store nếu dữ liệu tham chiếu media upload. Sau restore chạy `db:check` và migration còn thiếu. Mã hóa snapshot, để ngoài Git; không sao chép dữ liệu thật/PII từ production. [PostgreSQL backup/restore](https://www.postgresql.org/docs/current/backup.html).
+
+Integration test vẫn dùng database cô lập trên từng máy. Không dùng Docker image hay copy trực tiếp thư mục volume làm cơ chế đồng bộ dữ liệu phát triển.
+
 ## Thứ tự bootstrap từ workspace trống
 
 1. Tạo root `package.json` private ESM, `pnpm-workspace.yaml` (`apps/*`/`packages/*`), `.node-version`, `turbo.json`, strict TS base, ESLint, Prettier + Tailwind plugin, Husky/lint-staged, dependency-cruiser và `pnpm-lock.yaml`. Pin exact patch/peer-compatible từ [stack](stack-dependencies.md); `pnpm install --frozen-lockfile` sau khi có lock.
-2. Tạo `packages/config`, `contracts`, `ui`, `observability`, `testkit`, `server`, `database` và public exports. Tạo `apps/api`, `worker`, `web`, `admin` theo app guides ngay F0; `/seller/*` và `/platform/*` ở cùng `apps/admin`. Cấu hình `components.json` ở `packages/ui`, `apps/web`, `apps/admin`, aliases trỏ shared component về `@cartasy/ui`; pin shadcn CLI, chọn bản Radix rõ ràng (flag `-b radix` khi init), commit component source đã sinh. CSS app chỉ là Tailwind/theme entry, feature/page dùng utilities.
-3. Tạo `infra/compose` cho PostgreSQL/Mailpit/object store có healthcheck và pinned image; `docker compose up -d`. Tạo `.env.example` chỉ tên biến/giá trị local vô hại; copy thành `.env.local` riêng mỗi app, secret không commit.
+2. Tạo `packages/config`, `contracts`, `observability`, `testkit`, `server`, `database` và public exports. Tạo `apps/api`, `worker`, `web`, `admin` theo app guides ngay F0; `/seller/*` và `/platform/*` ở cùng `apps/admin`. Cấu hình `components.json` riêng trong `apps/web` và `apps/admin`, aliases trỏ component shadcn vào `src/shared/ui` của chính app; pin shadcn CLI, chọn bản Radix rõ ràng khi init, commit component source đã sinh. Chỉ thêm component theo màn hình và compose component riêng khi shadcn thiếu. CSS app chỉ là Tailwind/theme entry, feature/page dùng utilities.
+3. Tạo `infra/compose` cho PostgreSQL/Mailpit/object store có healthcheck, pinned image và named volume cho dữ liệu; `docker compose up -d`. Tạo `.env.example` chỉ tên biến/giá trị local vô hại; copy thành `.env.local` riêng mỗi app, secret và snapshot không commit. Hỗ trợ cấu hình chỉ chạy Mailpit khi API/Worker dùng DB và bucket dev từ xa.
 4. Tạo DB schema/migrations theo [migrations](database-migrations.md), apply vào DB sạch và seed hai shop độc lập/hai seller, category/product/variant/listing/demo buyer/admin **chỉ local**. Không seed review/order giả như sự kiện thật.
 5. Chạy API + Worker rồi Web/Admin; kiểm tra health/readiness, Mailpit, object store. Seed bản `vi` và ít nhất một product/CMS bản `en` đã publish cùng một bản `en` chưa publish. Smoke `/vi`/`/en`, locale switch/404, auth cookie/login/MFA, Seller và Platform workspace, catalog, cart, checkout, payment success/failure/timeout, notifications, order, return/support.
 6. Sinh OpenAPI/type; chạy `pnpm check` gồm format/lint/typecheck/unit/integration/contract/migration/build/E2E theo [testing](testing-quality.md). Chỉ báo hoàn thành scaffold khi gate và smoke có bằng chứng.
@@ -82,13 +92,16 @@ packages:
 }
 ```
 
-Lưu lần lượt thành `package.json`, `pnpm-workspace.yaml` và `turbo.json`; thêm các script database/API/quality gate ở trên trước khi đánh dấu `F0-01`. Root `prettier.config.mjs` bật `prettier-plugin-tailwindcss` và trỏ `tailwindStylesheet` tới `./packages/ui/src/styles/globals.css` để class theo Tailwind 4 được sắp thứ tự đúng. `.husky/pre-commit` gọi `pnpm exec lint-staged`; `.husky/install.mjs` chỉ import/chạy Husky khi có dev dependencies và không ở CI/production, tránh lỗi install runtime image. Hook chỉ format file source đã stage, không thay CI: `pnpm format:check` nằm trong `pnpm check` và chạy trong pull request. [Prettier pre-commit](https://prettier.io/docs/precommit), [Tailwind plugin](https://github.com/tailwindlabs/prettier-plugin-tailwindcss#readme), [Husky](https://typicode.github.io/husky/get-started.html). Server TS dùng `module/moduleResolution: NodeNext`, `experimentalDecorators` và `emitDecoratorMetadata` cho Nest; Next dùng `moduleResolution: Bundler` theo generator. Mọi workspace bật `strict` và `noUncheckedIndexedAccess`. API/worker xuất ESM thật, không trộn CommonJS output. Cài dependency theo bảng, tạo lockfile, rồi dùng `pnpm install --frozen-lockfile` trong CI. Cài browser E2E một lần bằng `pnpm exec playwright install chromium` và engine thứ hai được chọn cho release.
+Lưu lần lượt thành `package.json`, `pnpm-workspace.yaml` và `turbo.json`; thêm các script database/API/quality gate ở trên trước khi đánh dấu `F0-01`. Root `prettier.config.mjs` bật `prettier-plugin-tailwindcss` và cấu hình `tailwindStylesheet` theo Web/Admin, vì mỗi app sở hữu `globals.css` riêng. `.husky/pre-commit` gọi `pnpm exec lint-staged`; `.husky/install.mjs` chỉ import/chạy Husky khi có dev dependencies và không ở CI/production, tránh lỗi install runtime image. Hook chỉ format file source đã stage, không thay CI: `pnpm format:check` nằm trong `pnpm check` và chạy trong pull request. [Prettier pre-commit](https://prettier.io/docs/precommit), [Tailwind plugin](https://github.com/tailwindlabs/prettier-plugin-tailwindcss#readme), [Husky](https://typicode.github.io/husky/get-started.html). Server TS dùng `module/moduleResolution: NodeNext`, `experimentalDecorators` và `emitDecoratorMetadata` cho Nest; Next dùng `moduleResolution: Bundler` theo generator. Mọi workspace bật `strict` và `noUncheckedIndexedAccess`. API/worker xuất ESM thật, không trộn CommonJS output. Cài dependency theo bảng, tạo lockfile, rồi dùng `pnpm install --frozen-lockfile` trong CI. Cài browser E2E một lần bằng `pnpm exec playwright install chromium` và engine thứ hai được chọn cho release.
 
 ```js
 // prettier.config.mjs
 export default {
   plugins: ['prettier-plugin-tailwindcss'],
-  tailwindStylesheet: './packages/ui/src/styles/globals.css',
+  overrides: [
+    { files: 'apps/web/src/**/*.{ts,tsx,js,jsx}', options: { tailwindStylesheet: './apps/web/src/app/globals.css' } },
+    { files: 'apps/admin/src/**/*.{ts,tsx,js,jsx}', options: { tailwindStylesheet: './apps/admin/src/app/globals.css' } },
+  ],
 };
 ```
 

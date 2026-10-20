@@ -3,8 +3,8 @@ doc_id: PACKAGE-GUIDE
 title: Shared Packages Architecture
 status: accepted
 owner: Architecture & Developer Experience
-last_updated: 2026-10-19
-version: 4.4.0
+last_updated: 2026-10-20
+version: 4.4.1
 source_of_truth: Trách nhiệm, src, exports, dependency và setup packages/*
 ---
 
@@ -17,15 +17,14 @@ Khi F3 được duyệt, `advertising`, `affiliate`, `ad-billing` là module own
 ## Package dependency graph
 
 ```text
-web/admin -> contracts, ui, config(public)
+web/admin -> contracts, config(public); shadcn source nằm trong từng app
 api/worker -> server, database, contracts(events), config, observability
 database -> server/public ports, config(server)
 server -> contracts(events only if transport-neutral) / pure primitives
 testkit -> server/contracts (dev-only)
-ui -> React/shadcn source bản Radix/Tailwind tokens; never server/database
 ```
 
-Không để `server` import HTTP generated client, `database` import app/controller, `contracts` import Drizzle, `ui` import API client. Domain entity không là HTTP DTO. Dependency-cruiser/ESLint chặn cycle, deep import và server-only dependency trong browser bundle.
+Không để `server` import HTTP generated client, `database` import app/controller hoặc `contracts` import Drizzle. Domain entity không là HTTP DTO. Dependency-cruiser/ESLint chặn cycle, deep import và server-only dependency trong browser bundle.
 
 ## Cấu trúc `src` và trách nhiệm
 
@@ -35,34 +34,10 @@ Không để `server` import HTTP generated client, `database` import app/contro
 | `@cartasy/database` | `src/{client,schema,repositories,read-models,migrations,seed}` | Drizzle/pg adapter; schema theo owner, một migration stream; không export DB client ra app UI |
 | `@cartasy/contracts` | `openapi/cartasy.v1.json`, `src/{generated,client,events}` | OpenAPI/type được sinh, typed client factory, event schema versioned; generated file không sửa tay |
 | `@cartasy/config` | `src/env/{api,worker,web,admin}.ts`, `src/presets/` | Zod fail-fast theo process; public env allowlist, không export secret cho browser |
-| `@cartasy/ui` | `src/{styles,components/ui,patterns,lib}` | shadcn/ui component bản Radix, semantic token và pattern thật sự dùng >=2 app; không chứa business price/order policy |
 | `@cartasy/observability` | `src/{logging,metrics,tracing}` | Pino/redaction, metric conventions, correlation; provider adapter có thể thay |
 | `@cartasy/testkit` | `src/{builders,clock,fixtures}` | Dev dependency, two-shop/two-buyer factories, fake clock và demo data có nhãn |
 
-### `@cartasy/ui` design system source
-
-```text
-packages/ui/components.json     # shadcn CLI aliases cho shared UI package
-packages/ui/src/
-  styles/
-    globals.css            # Tailwind import + semantic CSS variables/@theme
-  components/ui/           # source shadcn/ui bản Radix, review và commit
-    button.tsx
-    input.tsx
-    dialog.tsx
-    badge.tsx
-    skeleton.tsx
-  lib/
-    cn.ts                  # merge class Tailwind, không chứa rule domain
-  patterns/
-    form-field/            # label, hint, error association
-    empty-state/
-    error-state/
-    page-container/
-  index.ts                 # exports có chủ đích
-```
-
-Mỗi app và `packages/ui` có `components.json` với aliases thống nhất để CLI đặt shared primitive vào `packages/ui`, không nhân đôi vào Web/Admin. Chọn rõ shadcn/ui bản **Radix** khi init, pin CLI, chỉ add component cần dùng; generated source là code do repo sở hữu và phải review/accessibility test. CSS trong UI package chỉ cho Tailwind import, semantic variables và theme/foundation; app/page/feature dùng Tailwind utilities, không CSS thuần hoặc CSS Modules. Mỗi primitive/pattern có variants và state contract, accessibility example, test hoặc story trạng thái và ví dụ text `vi`/`en`; **không** import `next-intl` trong UI kit. App truyền translated copy/locale qua props và sở hữu router-specific Link adapter. Chỉ trích xuất pattern khi Web/Admin chia cùng semantic contract; visual của catalog/checkout/role vẫn ở app. [Design system](../system/design-system.md), [Web app](../apps/web/README.md), [shadcn monorepo](https://ui.shadcn.com/docs/monorepo).
+Web/Admin cài shadcn/ui trực tiếp, mỗi app có `components.json`, source component trong `src/shared/ui` và token/theme trong `src/app/globals.css`. Chỉ add component cần dùng; khi thiếu element hoặc hành vi, compose trong app theo use case. Không tạo package UI F0/F1. [Design system](../system/design-system.md), [ADR-0014](../decisions/ADR-0014-app-owned-shadcn-components.md).
 
 ## Mẫu module backend
 
@@ -70,10 +45,10 @@ Ví dụ `notifications`: `domain/notification.ts` giữ trạng thái và invar
 
 ## Version, build và setup
 
-1. Tạo manifest từng package với `name`, `type: module`, `exports` trỏ source cho dev/built dist cho runtime theo toolchain đã kiểm; `private: true`. Pin direct dependencies tại package consumer, peer React cho `ui`. Chỉ `contracts`/`ui` có browser-compatible export.
+1. Tạo manifest từng package với `name`, `type: module`, `exports` trỏ source cho dev/built dist cho runtime theo toolchain đã kiểm; `private: true`. Pin direct dependencies tại package consumer. `contracts` có browser-compatible export; UI dependency nằm ở Web/Admin.
 2. `pnpm install` từ lockfile; build theo dependency order qua Turbo. ESM NodeNext cho server/database/worker, Bundler resolution cho Next client. TS strict/noUncheckedIndexedAccess.
 3. `api:generate` sinh OpenAPI và client; `api:check` fail khi drift. `db:generate` sinh SQL migration để review; production không dùng push schema.
-4. Gate theo package: lint/typecheck/build, module unit, database integration với PG thật, API contract/event compatibility, UI accessibility, architecture dependency test. Testkit không đi vào runtime image.
-5. Khi thêm feature: xác định context/data owner → public port/use case → adapter → HTTP/event type → UI. Chỉ trích xuất `ui`/primitive khi hai consumer có cùng semantic contract, không vì hai đoạn code tình cờ giống.
+4. Gate theo package: lint/typecheck/build, module unit, database integration với PG thật, API contract/event compatibility và architecture dependency test; accessibility kiểm ở Web/Admin. Testkit không đi vào runtime image.
+5. Khi thêm feature: xác định context/data owner → public port/use case → adapter → HTTP/event type → UI. Component thiếu từ shadcn được compose trong app; chỉ xem lại package dùng chung qua ADR khi nhu cầu thực tế ở cả hai app được chứng minh.
 
 [Local development](../platform/local-development.md) sở hữu lệnh root/env; [app guides](../apps/README.md) sở hữu setup từng app.

@@ -3,8 +3,8 @@ doc_id: TECH-STACK
 title: Cartasy Tech Stack and Dependencies
 status: accepted
 owner: Cartasy Engineering
-last_updated: 2026-10-19
-version: 4.4.0
+last_updated: 2026-10-20
+version: 4.4.1
 source_of_truth: Toolchain, thư viện bắt buộc, version policy và compatibility gate
 review_cycle: Mỗi lần nâng major hoặc đổi runtime
 ---
@@ -25,7 +25,7 @@ NestJS 12/Better Auth Express chạy ESM. `apps/api` phải mount Better Auth ha
 | Ngôn ngữ | `typescript`, `@types/node` | Strict ESM, typecheck độc lập |
 | Web/Admin chung Seller-Platform | `next`, `react`, `react-dom` | SSR, App Router, SEO và UI |
 | Web i18n | `next-intl` | `/[locale]`, UI messages, navigation/formatting; pin exact patch tương thích Next 16 khi scaffold, kiểm peer/build cả hai locale |
-| UI | `tailwindcss`, `@tailwindcss/postcss`, `postcss`, shadcn/ui CLI (dev), Radix primitive và utility dependency theo component được chọn, `lucide-react` | Web/Admin dùng component source từ shadcn/ui bản Radix trong `@cartasy/ui`; Tailwind utilities cho layout/visual; chỉ cài dependency thực tế dùng |
+| UI | `tailwindcss`, `@tailwindcss/postcss`, `postcss`, shadcn/ui CLI (dev), Radix primitive và utility dependency theo component được chọn, `lucide-react` | Web/Admin dùng shadcn/ui bản Radix trực tiếp trong từng app; Tailwind utilities cho layout/visual; chỉ cài dependency thực tế dùng |
 | Client state/data | `zustand`, `@tanstack/react-query`, `openapi-fetch` | Zustand cho UI state dùng chung; React Query cho server state; typed HTTP client; URL giữ state có thể chia sẻ |
 | Form | `react-hook-form`, `@hookform/resolvers`, `zod` | Form state và client validation; server vẫn validate độc lập |
 | API | `@nestjs/common`, `@nestjs/core`, `@nestjs/platform-express`, `@nestjs/swagger`, `reflect-metadata`, `rxjs` | HTTP, module DI và OpenAPI |
@@ -45,7 +45,7 @@ NestJS 12/Better Auth Express chạy ESM. `apps/api` phải mount Better Auth ha
 
 Dev type packages theo consumer: `@types/react`, `@types/react-dom`, `@types/pg`, `@types/nodemailer` và `@types/supertest`. Chỉ khai báo dependency trực tiếp ở workspace dùng nó; `drizzle-kit`, `openapi-typescript`, test/lint/formatter là dev dependency, không đưa vào runtime image.
 
-Không dùng Redis/BullMQ, search engine, FCM, WebSocket server, payment SDK thật hoặc carrier SDK trong **F1 baseline**. Ad billing provider SDK/partner affiliate API sau MVP là quyết định riêng theo hợp đồng và [ADR-0010](../decisions/ADR-0010-simulated-commerce-real-monetization-boundary.md); không thêm vào runtime F1 hoặc mock checkout. Zustand không là nguồn dữ liệu API, quyền, giá hay giao dịch. shadcn/ui là công cụ tạo source, không là runtime UI package; pin CLI khi scaffold, chọn rõ bản **Radix** (CLI hiện có mặc định khác), commit và review component được sinh. [ADR-0013](../decisions/ADR-0013-frontend-state-ui-tooling.md), [shadcn monorepo](https://ui.shadcn.com/docs/monorepo), [chọn Radix](https://ui.shadcn.com/docs/changelog/2026-07-base-ui-default).
+Không dùng Redis/BullMQ, search engine, FCM, WebSocket server, payment SDK thật hoặc carrier SDK trong **F1 baseline**. Ad billing provider SDK/partner affiliate API sau MVP là quyết định riêng theo hợp đồng và [ADR-0010](../decisions/ADR-0010-simulated-commerce-real-monetization-boundary.md); không thêm vào runtime F1 hoặc mock checkout. Zustand không là nguồn dữ liệu API, quyền, giá hay giao dịch. shadcn/ui là công cụ tạo source, không là runtime UI package; pin CLI khi scaffold, chọn rõ bản **Radix**, commit và review component được sinh trong từng app. Chỉ compose component riêng khi shadcn thiếu nhu cầu cụ thể. [ADR-0014](../decisions/ADR-0014-app-owned-shadcn-components.md), [chọn Radix](https://ui.shadcn.com/docs/changelog/2026-07-base-ui-default).
 
 Các lựa chọn dựa trên khả năng được tài liệu chính thức mô tả: [NestJS modules](https://docs.nestjs.com/first-steps), [Drizzle migrations](https://orm.drizzle.team/docs/migrations), [NestJS OpenAPI](https://docs.nestjs.com/openapi/introduction), [OpenAPI Fetch](https://openapi-ts.dev/openapi-fetch/), [Better Auth](https://better-auth.com/docs/installation) và [pnpm 12](https://pnpm.io/installation).
 

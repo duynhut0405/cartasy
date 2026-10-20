@@ -25,6 +25,8 @@ PK UUID/opaque; FK cho owner/resource, unique composite cho business key, CHECK 
 5. Seed reference data idempotent bằng natural key; demo buyer/admin/order chỉ local/test, tách khỏi production seed. Không copy dữ liệu thật sang local.
 6. Backup/PITR và restore drill ở [operations](deployment-operations.md); trước destructive contract, xác nhận backup và version app compatible. Không xóa product/shop/listing có order history; archive và giữ snapshot.
 
+Máy phát triển mới dựng baseline bằng migration đã commit và seed local/test idempotent từ cùng commit; seed dùng natural key/ID ổn định và media fixture có quyền sử dụng để chạy lặp không nhân bản dữ liệu. DB remote dev cá nhân chỉ seed lúc khởi tạo; sau đó dữ liệu phát triển nằm trong DB đó, không tự đồng bộ từ Docker volume của máy khác. Nếu cần chuyển đúng trạng thái local, dùng `pg_dump`/`pg_restore` vào DB rỗng, giữ migration history và chuyển object store cùng thời điểm; kiểm schema/row count sau restore. Quy trình môi trường và bảo vệ snapshot ở [local development](local-development.md).
+
 ## Giao dịch và đối soát
 
 Checkout atomicity, reservation CAS, voucher hold, payment settlement và refund xem [architecture](../system/architecture.md) và domain files. Dùng transaction ngắn, lock theo thứ tự ID nhất quán; không gọi SMTP/S3 trong transaction. Outbox ghi cùng transaction nguồn; worker at-least-once + inbox dedupe. Reconciliation định kỳ: tổng order/shop order, paid/refunded cap, stock/reservation, coupon usage, outbox/delivery; sai lệch tạo alert/audit, không auto-heal tùy tiện.

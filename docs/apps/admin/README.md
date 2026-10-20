@@ -3,8 +3,8 @@ doc_id: APP-ADMIN
 title: Unified Admin Workspace — Seller and Platform
 status: accepted
 owner: Marketplace & Platform Engineering
-last_updated: 2026-10-19
-version: 4.4.0
+last_updated: 2026-10-20
+version: 4.4.1
 source_of_truth: Setup, src, route, state và integration của apps/admin cho Seller/Platform Admin
 ---
 
@@ -16,12 +16,12 @@ source_of_truth: Setup, src, route, state và integration của apps/admin cho S
 
 `apps/admin` là **một** ứng dụng Next.js 16/React 19/TypeScript 6, một source tree/origin/deploy cho Seller và Platform Admin. Seller dùng `/seller/*`, nhân sự Cartasy dùng `/platform/*`. Một identity có thể có cả platform role và membership nhiều shop. Menu theo capability chỉ là UX; API/application layer quyết định RBAC + shop capability + ABAC (shop status, resource owner/state, MFA/recent auth) ở mỗi request. Admin không tự có quyền Seller và Seller không tự có quyền platform. [ADR-0011](../../decisions/ADR-0011-unified-admin-seller-workspace.md), [Security](../../system/security-privacy.md).
 
-App dùng `@cartasy/ui` (component shadcn/ui bản Radix), Tailwind CSS, `zustand`, `@tanstack/react-query`, `openapi-fetch`/`@cartasy/contracts`, `react-hook-form`/`zod`. Root dùng Prettier/Husky/lint-staged để format source. Bảng lớn dùng semantic table trước; chỉ thêm grid virtualization khi profiling chứng minh cần. Không viết business rule/SQL/permission table trong Next. [ADR-0013](../../decisions/ADR-0013-frontend-state-ui-tooling.md).
+App dùng shadcn/ui bản Radix trực tiếp trong source Admin, Tailwind CSS, `zustand`, `@tanstack/react-query`, `openapi-fetch`/`@cartasy/contracts`, `react-hook-form`/`zod`. Root dùng Prettier/Husky/lint-staged để format source. Bảng lớn dùng semantic table trước; chỉ thêm grid virtualization khi profiling chứng minh cần. Không viết business rule/SQL/permission table trong Next. [ADR-0014](../../decisions/ADR-0014-app-owned-shadcn-components.md).
 
 ## `src` chuẩn
 
 ```text
-components.json                         # shadcn CLI aliases; ui trỏ @cartasy/ui
+components.json                         # shadcn CLI aliases; ui trỏ src/shared/ui của Admin
 src/
   app/
     globals.css                        # Tailwind import/theme entry, không chứa CSS feature
@@ -131,7 +131,7 @@ src/
 
 ## Thiết kế màn hình và biên tập đa ngôn ngữ
 
-Admin có một design system từ `@cartasy/ui`: primitive/control khởi tạo bằng shadcn/ui bản Radix, rồi compose thành domain component; `workspace-shell` giữ navigation, breadcrumb, responsive sidebar, global feedback; Seller/Platform shell đổi menu và context theo capability, không tạo app hay UI kit thứ hai. Route chỉ compose widget/feature; bảng, filter toolbar, form, audit diff và publish checklist có loading/empty/error/forbidden/version-conflict state. Detail page tách summary, tabs, action panel và history; hành động nhạy cảm có reason, version và confirmation rõ. `shared/ui` chứa adapter primitive, domain component ở `features`/`entities`. Dùng Tailwind utilities và semantic token cho layout/visual, không viết CSS thuần hoặc CSS Modules trong feature/page; CSS global chỉ cho Tailwind import và token/theme nền tảng. [Design system](../../system/design-system.md).
+Admin add component shadcn/ui bản Radix theo nhu cầu màn hình trong `shared/ui`, rồi compose thành domain component ở `features`/`entities`; chỉ viết component riêng khi shadcn thiếu element hoặc hành vi. `workspace-shell` giữ navigation, breadcrumb, responsive sidebar, global feedback; Seller/Platform shell đổi menu và context theo capability. Route chỉ compose widget/feature; bảng, filter toolbar, form, audit diff và publish checklist có loading/empty/error/forbidden/version-conflict state. Detail page tách summary, tabs, action panel và history; hành động nhạy cảm có reason, version và confirmation rõ. Dùng Tailwind utilities và semantic token cho layout/visual, không viết CSS thuần hoặc CSS Modules trong feature/page; CSS global chỉ cho Tailwind import và token/theme nền tảng. [Design system](../../system/design-system.md).
 
 Một workspace này quản lý bản dịch catalog/shop/CMS theo `vi`/`en`: editor hiển thị từng locale, source/revision/diff, preview Web route tương ứng, field thiếu và trạng thái draft/review/published. Publish theo quyền owner và review policy ở API; nút UI không cấp quyền. Seller chỉ đề xuất/sửa nội dung shop mình, platform reviewer duyệt canonical/CMS; không copy bản `vi` thành `en` published. Admin UI có thể dùng `next-intl` không route prefix theo user preference khi triển khai bản dịch Admin; URL `/seller/*` và `/platform/*` giữ ổn định, không cần hreflang/SEO. [ADR-0012](../../decisions/ADR-0012-multilingual-storefront.md).
 
@@ -152,7 +152,7 @@ Typed client trong **cùng app** gọi `/v1/seller/*` ở khu Seller và `/v1/ad
 `NEXT_PUBLIC_API_URL=http://localhost:3002/v1`, `NEXT_PUBLIC_ADMIN_URL=http://localhost:3001`, `PORT=3001`; không có `SELLER_URL`, cổng 3003, origin Seller riêng hoặc database/SMTP secret trong app. Admin origin nằm trong API CORS allowlist; production dùng HTTPS same-site sibling domain.
 
 1. Pin Node/pnpm và cài workspace theo [local development](../../platform/local-development.md); migrate/seed hai seller/hai shop, platform admin và identity có cả hai role; bootstrap role bằng command an toàn, bật API/worker.
-2. Tạo `apps/admin/package.json`/Next App Router, cây `src`, `components.json` alias tới `@cartasy/ui`, Tailwind source/theme entry và scripts `dev/build/start/lint/typecheck/test`; dùng package `@cartasy/contracts`/`ui` đã build. Root Prettier/Husky format source theo [local setup](../../platform/local-development.md).
+2. Tạo `apps/admin/package.json`/Next App Router, cây `src`, `components.json` alias tới `src/shared/ui` của Admin, Tailwind source/theme entry và scripts `dev/build/start/lint/typecheck/test`; dùng `@cartasy/contracts` đã build. Root Prettier/Husky format source theo [local setup](../../platform/local-development.md).
 3. Cấu hình `.env.local`; chạy `pnpm --filter @cartasy/admin dev` tại port 3001. Login Seller/Admin, enroll MFA, kiểm tra `/portal/context`, `/seller/*`, `/platform/*` và denied.
 4. Smoke hai Seller chỉ thấy shop mình; Admin đúng capability duyệt application/proposal; identity hai role chuyển workspace/shop; revoke/suspend/stream reconnect không lộ cache cũ. Gate `pnpm --filter @cartasy/admin lint`, `typecheck`, `build` và E2E two-shop/two-buyer, cross-role deep link/API denial, CSRF, reason/audit, mobile accessibility.
 

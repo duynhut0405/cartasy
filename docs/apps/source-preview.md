@@ -3,8 +3,8 @@ doc_id: APP-SOURCE-PREVIEW
 title: Preview source, thư viện, module và state/store Cartasy
 status: accepted
 owner: Cartasy Engineering
-last_updated: 2026-10-19
-version: 4.4.0
+last_updated: 2026-10-20
+version: 4.4.1
 source_of_truth: Bản đồ đọc nhanh của các app/package; chi tiết do app guides, source architecture và stack sở hữu
 ---
 
@@ -18,13 +18,13 @@ source_of_truth: Bản đồ đọc nhanh của các app/package; chi tiết do 
 | `apps/admin/src` | Next/React, Zustand, React Query, OpenAPI Fetch, React Hook Form/Zod, shadcn/ui Radix + Tailwind | URL + React local + Zustand cho workspace UI + React Query theo actor/workspace/shop; API giữ quyền |
 | `apps/api/src` | Nest/Express, Better Auth, DTO validation, Swagger | Request/DI tạm; business state ở PostgreSQL qua `server`/`database` |
 | `apps/worker/src` | Nest application context, Nodemailer, Web Push, S3 adapter | PostgreSQL outbox/inbox/jobs; object storage cho media |
-| `packages/*/src` | Pure TypeScript domain, Drizzle/pg, generated contract, React UI, Zod config, Pino | PostgreSQL là nguồn nghiệp vụ; package chỉ giữ contract/adapter/token |
+| `packages/*/src` | Pure TypeScript domain, Drizzle/pg, generated contract, Zod config, Pino | PostgreSQL là nguồn nghiệp vụ; package chỉ giữ contract/adapter |
 
 ## Toàn cảnh dependency và dữ liệu
 
 ```text
 apps/web ──────┐
-               ├── @cartasy/contracts + @cartasy/ui + public config
+               ├── @cartasy/contracts + public config; UI source trong từng app
 apps/admin ────┘                  │
        │ typed HTTP + cookie      │
        └───────────> apps/api ────┼──> @cartasy/server (rule/use case/port)
@@ -41,7 +41,7 @@ apps/admin ────┘                  │
 | Khu vực | Module/thư viện chính | State/store |
 |---|---|---|
 | `proxy.ts`, `i18n/*`, `app/[locale]/*`, `messages/{vi,en}` | Next.js App Router, React, `next-intl`; `/vi` và `/en`, metadata/sitemap | Locale và search/filter/sort/cursor ở URL; public Server Component fetch/cache có key theo locale |
-| `widgets/*`, `entities/*`, `shared/ui/*` | `@cartasy/ui` chứa shadcn/ui bản Radix, Tailwind CSS, `lucide-react` | Props từ API; UI local ở React, UI dùng chung trong feature/widget ở Zustand |
+| `widgets/*`, `entities/*`, `shared/ui/*` | shadcn/ui bản Radix trong Web, Tailwind CSS, `lucide-react` | Props từ API; UI local ở React, UI dùng chung trong feature/widget ở Zustand |
 | `features/discovery`, `product-detail`, `wishlist`, `order-history`, `reviews`, `returns`, `support`, `account`, `notifications` | React, `@tanstack/react-query`, `openapi-fetch`, `@cartasy/contracts` | React Query cache cho response/mutation; query key có actor/resource/filter/locale khi chứa text |
 | `features/cart`, `checkout`, `payment-result` | React Query, `react-hook-form`, `zod`, `@hookform/resolvers` | Guest cart IDs/qty trong `localStorage` versioned; cart/order Buyer ở API/PostgreSQL; form local; opaque checkout idempotency key trong `sessionStorage` theo **một attempt** |
 | `shared/api`, `auth`, `realtime`, `config`, `styles`, `public/sw.js` | Typed API client, browser `EventSource`, Push/Notification API, VAPID public key | Session cookie `HttpOnly` do API quản lý; SSE chỉ báo refetch; Web Push subscription do API lưu |
@@ -53,9 +53,9 @@ Luồng UI: `app` compose `widgets/features`; `features` dùng `entities/shared`
 | Khu vực | Module/thư viện chính | State/store |
 |---|---|---|
 | `app/(auth)`, `(workspace)`, `(seller)/seller/*`, `(platform)/platform/*` | Next.js App Router/React; một source tree, một origin | URL giữ workspace/shop/resource/filter/cursor; quyền được kiểm lại ở API |
-| `widgets/workspace-shell`, `seller-shell`, `platform-shell`, `filter-toolbar`, `audit-diff`, `translation-editor` | `@cartasy/ui` chứa shadcn/ui bản Radix, Tailwind, icon, Zustand | Sidebar/panel UI ở Zustand; shell/menu theo context từ `/v1/portal/context`, không là bằng chứng cấp quyền |
+| `widgets/workspace-shell`, `seller-shell`, `platform-shell`, `filter-toolbar`, `audit-diff`, `translation-editor` | shadcn/ui bản Radix trong Admin, Tailwind, icon, Zustand | Sidebar/panel UI ở Zustand; shell/menu theo context từ `/v1/portal/context`, không là bằng chứng cấp quyền |
 | Seller features: onboarding, shop switch/profile/membership, product proposal, listing/inventory/order, promotion, notification proposal, support/return/review, reporting | React Query, `openapi-fetch`, generated contracts; React Hook Form/Zod cho form | Query key có actor + workspace + shop ID + membership/capability version; đổi shop hủy request/stream và clear private cache/form |
-| Platform features: catalog/listing/inventory/promotion/order/return/review/risk/support, shop governance, CMS/campaign, reporting, access, operations | Cùng typed client/form/UI kit; API `/v1/admin/*` theo capability | Draft form local, `If-Match`/version cho mutation; server lưu dữ liệu và audit; không optimistic update cho action nhạy cảm |
+| Platform features: catalog/listing/inventory/promotion/order/return/review/risk/support, shop governance, CMS/campaign, reporting, access, operations | Cùng typed client/form/component shadcn của Admin; API `/v1/admin/*` theo capability | Draft form local, `If-Match`/version cho mutation; server lưu dữ liệu và audit; không optimistic update cho action nhạy cảm |
 | `shared/api`, `providers`, `auth`, `realtime`, `config`, `ui` | React Query, Zustand, `EventSource`, API cookie/session | Session và capability do API quyết định; không lưu authority trong localStorage/Zustand |
 
 Admin hiện **không có app Seller riêng**. Bản dịch catalog/shop/CMS được biên tập tại đây; route Admin `/seller/*`/`/platform/*` không cần locale prefix SEO. Dịch UI Admin bằng `next-intl` là khả năng mở rộng trong app hiện có, chưa là dependency bắt buộc của F1. [Cấu trúc đầy đủ](admin/README.md).
@@ -90,12 +90,13 @@ Worker không có HTTP public. SMTP/Push/S3 gọi ngoài transaction; event xử
 | `@cartasy/server` | `modules/<context>/{domain,application,ports,public.ts}`, `platform/{clock,ids,transaction,errors}` | TypeScript thuần cho rule/use case/authorization; entity trong một operation, lưu bền qua port chứ không qua singleton store |
 | `@cartasy/database` | `client`, `schema`, `repositories`, `read-models`, `migrations`, `seed` | `drizzle-orm`/`pg`, `drizzle-kit` dev; PostgreSQL là nguồn giao dịch, search F1 dùng PostgreSQL full-text/trigram |
 | `@cartasy/contracts` | `openapi`, `generated`, `client`, `events` | `openapi-typescript` dev sinh type từ API; wire schema, không có state |
-| `@cartasy/ui` | `styles`, `components/ui`, `patterns` | Source shadcn/ui bản Radix + Tailwind token và accessible primitive; nhận translated copy qua props, không gọi API |
 | `@cartasy/config` | `env/{api,worker,web,admin}`, `presets` | Zod parse env, public/server allowlist; không là runtime state store |
 | `@cartasy/observability` | `logging`, `metrics`, `tracing` | Pino/redaction và correlation; metric/log không là nguồn nghiệp vụ |
 | `@cartasy/testkit` | `builders`, `clock`, `fixtures` | Fixture/fake clock chỉ cho test, không đưa runtime image |
 
 `@cartasy/server` F1 có các owner module: identity/customers/shops/seller-onboarding; catalog/media/listings/discovery; inventory/pricing/promotions/carts/wishlist/checkout/payments/orders/fulfillment; notifications/communications; reviews/risk/returns/support; audit/outbox/analytics/cms/reporting/jobs. F2 `flash-sales`, `recommendations`; F3 `advertising`, `affiliate`, `ad-billing` chỉ tạo khi được duyệt và triển khai. [Package guide](../packages/README.md), [source architecture](../system/source-architecture.md).
+
+Web/Admin có `components.json` riêng, source shadcn trong `src/shared/ui` của mỗi app và token trong `src/app/globals.css`; chỉ compose component riêng khi shadcn thiếu nhu cầu thực tế. [ADR-0014](../decisions/ADR-0014-app-owned-shadcn-components.md).
 
 ## State/store chọn cho từng loại dữ liệu
 

@@ -4,7 +4,7 @@ title: Cartasy Database-first, Web-priority Setup Progress Checklist
 status: active
 owner: Product & Engineering
 last_updated: 2026-10-20
-version: 1.1.0
+version: 1.1.1
 source_of_truth: Tiến độ setup workspace theo chiến lược PostgreSQL/API thật trước, ưu tiên hoàn thiện Web theo vertical slice
 review_cycle: Sau mỗi phase setup hoặc khi đổi chiến lược API, schema hay thứ tự vertical slice
 ---
@@ -77,7 +77,7 @@ Gate S0:
 - [ ] `S1-06` Cấu hình Husky/lint-staged; hook local không thay thế CI.
 - [ ] `S1-07` Tạo root scripts `dev`, `build`, `lint`, `typecheck`, `test`, `test:integration`, `test:e2e` và `check`.
 - [ ] `S1-08` Cài dependency, sinh và commit một `pnpm-lock.yaml`; CI dùng frozen lockfile.
-- [ ] `S1-09` Thêm `.gitignore` và `.env.example` không chứa secret thật.
+- [ ] `S1-09` Thêm `.gitignore` và `.env.example` không chứa secret thật; bỏ qua env local và DB snapshot.
 
 Gate S1:
 
@@ -87,7 +87,7 @@ Gate S1:
 ## S2 — App và package skeleton
 
 - [ ] `S2-01` Tạo bốn app: `apps/web`, `apps/admin`, `apps/api`, `apps/worker`.
-- [ ] `S2-02` Tạo các package: `server`, `database`, `contracts`, `config`, `ui`, `observability`, `testkit`.
+- [ ] `S2-02` Tạo các package: `server`, `database`, `contracts`, `config`, `observability`, `testkit`.
 - [ ] `S2-03` Mỗi workspace có `package.json`, public `exports` và scripts tối thiểu phù hợp.
 - [ ] `S2-04` `apps/web` và `apps/admin` không import `server` hoặc `database`.
 - [ ] `S2-05` `packages/server` không import Next, Nest hoặc Drizzle.
@@ -102,7 +102,7 @@ Gate S2:
 
 ## S3 — PostgreSQL, migration và environment foundation
 
-- [ ] `S3-01` Tạo Compose cho PostgreSQL, Mailpit và S3-compatible object store với image pin và healthcheck.
+- [ ] `S3-01` Tạo Compose cho PostgreSQL, Mailpit và S3-compatible object store với image pin, healthcheck và named volume dữ liệu.
 - [ ] `S3-02` Chốt cổng local: Web `3000`, Admin `3001`, API `3002`, PostgreSQL `5432`, Mailpit `1025/8025`, object store `9000/9001`.
 - [ ] `S3-03` Dùng thống nhất `localhost`; không trộn với `127.0.0.1` trong cookie/CORS/auth URL.
 - [ ] `S3-04` Tạo typed env parser theo process; thiếu biến bắt buộc phải fail-fast.
@@ -112,6 +112,7 @@ Gate S2:
 - [ ] `S3-08` Tạo scripts `db:generate`, `db:migrate`, `db:seed`, `db:check`.
 - [ ] `S3-09` Tạo API `/health/live` và `/health/ready`; readiness kiểm PostgreSQL và dependency bắt buộc.
 - [ ] `S3-10` Tạo database test cô lập; test không dùng database local đang phục vụ developer.
+- [ ] `S3-11` Ghi quy trình máy mới dựng DB từ migration/seed và cấu hình DB/bucket dev riêng dùng qua nhiều máy; không coi Docker image/volume là bản đồng bộ dữ liệu.
 
 Gate S3:
 
@@ -119,6 +120,7 @@ Gate S3:
 - [ ] Một migration rỗng/baseline apply được trên DB sạch và được migration history ghi nhận đúng một lần.
 - [ ] API readiness đổi đúng khi PostgreSQL sẵn sàng hoặc mất kết nối.
 - [ ] Secret scan không phát hiện credential thật trong repository.
+- [ ] Trên máy/volume sạch, cùng commit và env mẫu chạy được migration + seed; seed chạy lặp không nhân đôi. Nếu dùng DB dev từ xa, xác nhận không trỏ vào staging/production và test vẫn cô lập.
 
 ## S4 — Schema, migration và seed Public Catalog
 
@@ -166,7 +168,7 @@ Gate S5:
 - [ ] `S6-01` Cấu hình Next App Router và `next-intl` với locale prefix luôn có `/vi`/`/en`, mặc định `vi`.
 - [ ] `S6-02` Cấu hình `src/proxy.ts`, routing/request/navigation helpers và locale validation.
 - [ ] `S6-03` Tạo message namespace `vi`/`en` và gate kiểm key/ICU placeholder parity.
-- [ ] `S6-04` Tạo `@cartasy/ui` bằng shadcn/ui bản Radix, Tailwind semantic token và public export có chủ đích.
+- [ ] `S6-04` Cấu hình shadcn/ui bản Radix trực tiếp trong Web và Admin với hai `components.json`; add component cần dùng vào `src/shared/ui` của từng app, hiện thực Tailwind semantic token trong CSS app; chỉ compose component riêng khi shadcn thiếu.
 - [ ] `S6-05` Tạo Web shell, skip link, header/navigation/footer, responsive container và focus styles.
 - [ ] `S6-06` Cấu hình React Query cho private/server state tương lai và error mapping từ API envelope.
 - [ ] `S6-07` Zustand chỉ giữ UI state dùng chung theo feature/widget; không lưu catalog response, giá, stock, session, cart hoặc quyền.

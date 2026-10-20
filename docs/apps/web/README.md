@@ -3,8 +3,8 @@ doc_id: APP-WEB
 title: Web Frontend — multilingual storefront
 status: accepted
 owner: Storefront Engineering
-last_updated: 2026-10-19
-version: 4.4.0
+last_updated: 2026-10-20
+version: 4.4.1
 source_of_truth: Setup, src, locale routing, design composition, state và integration của apps/web
 ---
 
@@ -14,7 +14,7 @@ source_of_truth: Setup, src, locale routing, design composition, state và integ
 
 ## Vai trò và stack
 
-`apps/web` là Next.js 16 App Router/React 19/TypeScript 6 storefront, chạy Node server. F1 có giao diện tiếng Việt và tiếng Anh bằng `next-intl`; URL luôn có `/vi` hoặc `/en`, mặc định `vi`. Locale đổi ngôn ngữ giao diện/nội dung, không đổi thị trường Việt Nam, giá VND hoặc bản chất đơn hàng mô phỏng. [ADR-0012](../../decisions/ADR-0012-multilingual-storefront.md). Thư viện trực tiếp: `next`, `react`, `react-dom`, `next-intl`, `zustand`, `@tanstack/react-query`, `openapi-fetch` + generated type từ `@cartasy/contracts`, `react-hook-form`/`zod`/`@hookform/resolvers`, `tailwindcss`, `@cartasy/ui` (component shadcn/ui bản Radix) và `lucide-react`. Dev: `eslint-config-next`, `@types/react`, `@playwright/test` tại test workspace; Prettier/Husky/lint-staged ở root. Version/policy ở [stack](../../platform/stack-dependencies.md), [ADR-0013](../../decisions/ADR-0013-frontend-state-ui-tooling.md).
+`apps/web` là Next.js 16 App Router/React 19/TypeScript 6 storefront, chạy Node server. F1 có giao diện tiếng Việt và tiếng Anh bằng `next-intl`; URL luôn có `/vi` hoặc `/en`, mặc định `vi`. Locale đổi ngôn ngữ giao diện/nội dung, không đổi thị trường Việt Nam, giá VND hoặc bản chất đơn hàng mô phỏng. [ADR-0012](../../decisions/ADR-0012-multilingual-storefront.md). Thư viện trực tiếp: `next`, `react`, `react-dom`, `next-intl`, `zustand`, `@tanstack/react-query`, `openapi-fetch` + generated type từ `@cartasy/contracts`, `react-hook-form`/`zod`/`@hookform/resolvers`, `tailwindcss`, các dependency shadcn/ui Radix thực sự dùng và `lucide-react`. Dev: shadcn CLI, `eslint-config-next`, `@types/react`, `@playwright/test` tại test workspace; Prettier/Husky/lint-staged ở root. Version/policy ở [stack](../../platform/stack-dependencies.md), [ADR-0014](../../decisions/ADR-0014-app-owned-shadcn-components.md).
 
 Web chỉ hiển thị và lấy dữ liệu qua API; không import `@cartasy/server` hoặc `@cartasy/database`. Quy tắc nghiệp vụ ở [domains](../../domains/README.md), route/payload ở [API contracts](../../system/api-contracts.md), UI tokens ở [design system](../../system/design-system.md).
 
@@ -22,7 +22,7 @@ Web chỉ hiển thị và lấy dữ liệu qua API; không import `@cartasy/se
 
 ```text
 next.config.ts             # createNextIntlPlugin
-components.json            # shadcn CLI aliases; ui trỏ @cartasy/ui
+components.json            # shadcn CLI aliases; ui trỏ src/shared/ui của Web
 messages/
   vi/*.json                 # Common, Navigation, Catalog, Cart, Checkout, Orders,
                             # Account, Notifications, Simulation, Metadata, Errors...
@@ -105,12 +105,12 @@ src/
     realtime/                # SSE + reconnect/poll fallback
     auth/                    # session hook, route gate
     config/                  # public env parser
-    ui/                      # app composition of @cartasy/ui
+    ui/                      # shadcn source và primitive/pattern riêng của Web
     lib/                     # domain-free date/money formatting
 tests/                      # app unit/component; E2E ở workspace tests/e2e
 ```
 
-Đây là blueprint, không yêu cầu tạo thư mục rỗng trước khi làm feature. `app` chỉ route/layout/metadata và compose widget/feature; `features` sở hữu thao tác người dùng; `entities` giữ presentation model/component nhỏ; `widgets` là tổ hợp section; `shared` không chứa rule domain. Dependency `app → widgets/features → entities → shared`; feature khác nhau giao tiếp qua composition ở route/widget hoặc public API của owner. `packages/ui` sở hữu token và component shadcn/ui bản Radix; `shared/ui` chỉ adapter cho Web. Store Zustand nằm trong `features/<owner>/model` hoặc `widgets/<owner>/model`, chỉ tạo provider ở biên Client Component phù hợp; không tạo store tổng hợp chứa mọi feature. Không tạo `services`/`utils` chung hay copy business rule.
+Đây là blueprint, không yêu cầu tạo thư mục rỗng trước khi làm feature. `app` chỉ route/layout/metadata và compose widget/feature; `features` sở hữu thao tác người dùng; `entities` giữ presentation model/component nhỏ; `widgets` là tổ hợp section; `shared` không chứa rule domain. Dependency `app → widgets/features → entities → shared`; feature khác nhau giao tiếp qua composition ở route/widget hoặc public API của owner. `shared/ui` chứa source shadcn/ui bản Radix được add theo nhu cầu Web; `app/globals.css` hiện thực token theo [design system](../../system/design-system.md). Store Zustand nằm trong `features/<owner>/model` hoặc `widgets/<owner>/model`, chỉ tạo provider ở biên Client Component phù hợp; không tạo store tổng hợp chứa mọi feature. Không tạo `services`/`utils` chung hay copy business rule.
 
 ### Mẫu vertical slice: product detail
 
@@ -136,7 +136,7 @@ Public API nhận locale URL một cách tường minh, cache key/tag chứa loc
 
 ## Tổ chức thiết kế trang
 
-Thiết kế theo bốn tầng: `packages/ui` cho foundation/token/component shadcn/ui bản Radix; `entities` cho product/listing/shop visuals; `features` cho control và feedback; `widgets` cho section hoàn chỉnh; route chọn layout, thứ tự section và metadata. Trang product ghép `ProductGallery`, `ListingSelector`, `ShopIdentity`, `SimulationNotice`; giá luôn gắn listing/shop. Header/footer, breakpoint và token không sao chép vào từng page. UI control/primitive bắt đầu từ component shadcn/ui trong `@cartasy/ui`; domain component tự compose từ các primitive đó. Dùng Tailwind utilities và semantic token cho layout/visual, không viết CSS thuần hoặc CSS Modules trong feature/page; file CSS global chỉ dành cho Tailwind import và token/theme nền tảng. [Design system](../../system/design-system.md) sở hữu responsive grid, typography, spacing, component states, nội dung và accessibility.
+Thiết kế theo bốn tầng: `shared/ui` của Web cho component shadcn/ui bản Radix cần dùng; `entities` cho product/listing/shop visuals; `features` cho control và feedback; `widgets` cho section hoàn chỉnh; route chọn layout, thứ tự section và metadata. Trang product ghép `ProductGallery`, `ListingSelector`, `ShopIdentity`, `SimulationNotice`; giá luôn gắn listing/shop. UI control/primitive bắt đầu từ shadcn; chỉ compose component riêng khi thiếu element hoặc hành vi cần thiết. Dùng Tailwind utilities và semantic token cho layout/visual, không viết CSS thuần hoặc CSS Modules trong feature/page; file CSS global chỉ dành cho Tailwind import và token/theme nền tảng. [Design system](../../system/design-system.md) sở hữu responsive grid, typography, spacing, component states, nội dung và accessibility.
 
 Mỗi route có loading/empty/error/success, unauthenticated/forbidden, stale price/stock và thiếu bản dịch; review mobile 320–390 px, tablet, desktop, keyboard/focus/screen reader/reduced motion. Kiểm cả `vi` và `en` với chuỗi dài, wrap nút/menu/filter/dialog và giá VND. Ảnh dùng approved media, aspect ratio theo placement và alt text đúng locale; ảnh lỗi có fallback. Sponsored/affiliate sau MVP có disclosure đúng locale.
 
@@ -157,7 +157,7 @@ Tạo `shared/api/client.ts` từ OpenAPI generated type, base URL từ env, inc
 `NEXT_PUBLIC_API_URL=http://localhost:3002/v1`, `NEXT_PUBLIC_SITE_URL=http://localhost:3000`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY` là public; không đặt secret trong `NEXT_PUBLIC_*`. `PORT=3000` local; URL production được inject tại build và phải khớp CORS/API cookie site. Dùng chung Node/pnpm/lockfile và dependency services tại [local development](../../platform/local-development.md).
 
 1. Từ workspace root, pin runtime, `pnpm install --frozen-lockfile` và bật PostgreSQL/Mailpit/object store; chạy migration/seed/API theo [local setup](../../platform/local-development.md).
-2. Tạo `apps/web/package.json` với dependencies trên và script `dev`/`build`/`start`/`lint`/`typecheck`/`test`. Cấu hình `next-intl` plugin/proxy/routing/messages, `components.json` alias tới `@cartasy/ui`, Tailwind source/theme entry, tạo `src` theo từng vertical slice, TS strict, import alias chỉ trong app. Root Prettier/Husky format source theo [local setup](../../platform/local-development.md).
+2. Tạo `apps/web/package.json` với dependencies trên và script `dev`/`build`/`start`/`lint`/`typecheck`/`test`. Cấu hình `next-intl` plugin/proxy/routing/messages, `components.json` alias tới `src/shared/ui` của Web, Tailwind source/theme entry, tạo `src` theo từng vertical slice, TS strict, import alias chỉ trong app. Root Prettier/Husky format source theo [local setup](../../platform/local-development.md).
 3. Tạo `.env.local` từ tên biến trên; chạy `pnpm --filter @cartasy/web dev` (script bind port 3000), xác nhận API CORS/cookie cho web origin.
 4. Kiểm `/` redirect, `/vi`/`/en`, locale switch/deep link, SEO/404, rồi mở home, product, cart, sign-in, checkout; kiểm tra email verification trong Mailpit và order mock success/failure. Lệnh gate: `pnpm --filter @cartasy/web lint`, `typecheck`, `build`; E2E storefront ở test workspace.
 

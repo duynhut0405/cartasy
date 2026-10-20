@@ -3,8 +3,8 @@ doc_id: UX-DESIGN
 title: Cartasy UI Design System
 status: accepted
 owner: Cartasy Design & Product
-last_updated: 2026-10-19
-version: 4.4.0
+last_updated: 2026-10-20
+version: 4.4.1
 source_of_truth: Token, component, nội dung, responsive và accessibility
 review_cycle: Khi thay đổi brand hoặc interaction pattern
 ---
@@ -17,7 +17,7 @@ Cartasy phải có nhịp và chức năng của marketplace thật: catalog rõ
 
 ## 2. Token và responsive baseline
 
-Semantic CSS variables trong `packages/ui`; Tailwind 4 map vào token, không hardcode màu khắp feature. Baseline trung tính có thể đổi brand mà không đổi component API:
+Tài liệu này sở hữu semantic token; `apps/web` và `apps/admin` hiện thực các CSS variables cần dùng trong `src/app/globals.css` của từng app. Tailwind 4 map vào token, không hardcode màu khắp feature. Baseline trung tính có thể đổi brand mà không đổi component API:
 
 | Token | Giá trị baseline | Dùng cho |
 |---|---|---|
@@ -37,7 +37,7 @@ Spacing 4/8/12/16/24/32/48/64 px; radius 8/12/16 px; touch target tối thiểu 
 
 ### Tổ chức file thiết kế và ownership
 
-`packages/ui` sở hữu token/foundation và source component shadcn/ui bản **Radix** dùng chung giữa Web/Admin. Các UI control/primitive khởi tạo từ shadcn/ui, sau đó review và tùy biến trong repo; domain component là composition của primitive và semantic HTML, không cần tạo một component shadcn mới cho từng nghiệp vụ. `apps/web/src/shared/ui` và `apps/admin/src/shared/ui` chỉ đặt adapter của app; domain visual ở `entities`, thao tác ở `features`, section ở `widgets`, route ở `app`. Không đặt `ProductCard`, `ListingSelector` hay logic quyền vào UI kit chung. Token có nhóm màu semantic, typography, spacing, radius, shadow, z-index, breakpoint/container và motion duration/easing; tên token mô tả vai trò thay vì màu cụ thể. CSS variables là source, Tailwind map vào variables. App/page/feature dùng Tailwind utilities và token, không viết CSS thuần hoặc CSS Modules; CSS global chỉ cho Tailwind import, variables/theme và foundation thật sự cần thiết. Brand/theme mới đổi token có kiểm contrast và visual regression. [ADR-0013](../decisions/ADR-0013-frontend-state-ui-tooling.md).
+Web/Admin dùng component shadcn/ui bản **Radix** trực tiếp trong `src/shared/ui` của từng app. Add component theo nhu cầu màn hình và review source được sinh; nếu thiếu element hoặc hành vi, compose từ shadcn/Radix và semantic HTML trong app. Domain visual ở `entities`, thao tác ở `features`, section ở `widgets`, route ở `app`; không tạo một UI kit riêng cho từng nghiệp vụ. Token có nhóm màu semantic, typography, spacing, radius, shadow, z-index, breakpoint/container và motion duration/easing; tên token mô tả vai trò thay vì màu cụ thể. Khi đổi token dùng chung, cập nhật cả Web/Admin và kiểm contrast/visual. App/page/feature dùng Tailwind utilities và token, không viết CSS thuần hoặc CSS Modules; CSS global chỉ cho Tailwind import, variables/theme và foundation thật sự cần thiết. [ADR-0014](../decisions/ADR-0014-app-owned-shadcn-components.md).
 
 Mỗi component có contract: props/slots, size/variant, trạng thái default/hover/focus/disabled/loading/error/empty, responsive, keyboard/screen reader, và ví dụ text `vi`/`en`. Form primitive không tự xử lý API error; feature map lỗi theo field và summary. Layout template chuẩn: `StoreShell`, `AccountShell`, `AuthShell`, `SellerShell`, `PlatformShell`; shell cung cấp skip link, header/nav/breadcrumb/main/footer, không chứa business rule. Trang chỉ compose section và data; một section có spacing/container thống nhất qua recipe, không hardcode riêng mỗi page.
 
@@ -45,9 +45,9 @@ Mỗi component có contract: props/slots, size/variant, trạng thái default/h
 
 ## 3. Component chuẩn
 
-Primitive: `Button`, `Link`, `TextField`, `Select`, `Checkbox`, `RadioGroup`, `Dialog`, `AlertDialog`, `Tabs`, `Badge`, `Table`, `Pagination`, `Skeleton`, `Toast`, `InlineAlert`, `EmptyState` và `ErrorState`. Primitive có size, variant, disabled/loading/error/focus state và keyboard contract.
+Các element cần dùng: `Button`, `Link`, `TextField`, `Select`, `Checkbox`, `RadioGroup`, `Dialog`, `AlertDialog`, `Tabs`, `Badge`, `Table`, `Pagination`, `Skeleton`, `Toast`, `InlineAlert`, `EmptyState` và `ErrorState`. Add component shadcn tương ứng khi có; các pattern còn thiếu được compose trong app khi màn hình cần. Component có size, variant, disabled/loading/error/focus state và keyboard contract.
 
-Domain component thuộc feature/app, không đưa vào `packages/ui` chỉ vì được dùng một nơi:
+Domain component thuộc feature/app:
 
 | Feature | Component |
 |---|---|

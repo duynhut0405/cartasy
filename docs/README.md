@@ -3,8 +3,8 @@ doc_id: DOC-INDEX
 title: Cartasy — bản đồ tài liệu chuẩn
 status: accepted
 owner: Product & Engineering
-last_updated: 2026-10-19
-version: 4.4.0
+last_updated: 2026-10-20
+version: 4.4.1
 source_of_truth: Cấu trúc, quyền sở hữu và thứ tự đọc tài liệu
 ---
 
@@ -14,7 +14,7 @@ Cartasy là marketplace đa seller cho Buyer mua sắm miễn phí. **Đơn mua,
 
 ## Cây tài liệu
 
-Web F1 có route `/[locale]` với `vi`/`en` và `next-intl`; nội dung catalog/shop/CMS theo bản dịch đã publish. Web/Admin dùng Zustand cho UI state dùng chung, shadcn/ui bản Radix + Tailwind cho component, Prettier/Husky cho format source. [Web guide](apps/web/README.md), [ADR-0012](decisions/ADR-0012-multilingual-storefront.md), [ADR-0013](decisions/ADR-0013-frontend-state-ui-tooling.md).
+Web F1 có route `/[locale]` với `vi`/`en` và `next-intl`; nội dung catalog/shop/CMS theo bản dịch đã publish. Web/Admin dùng Zustand cho UI state dùng chung, shadcn/ui bản Radix trực tiếp trong từng app + Tailwind cho component, Prettier/Husky cho format source. [Web guide](apps/web/README.md), [ADR-0012](decisions/ADR-0012-multilingual-storefront.md), [ADR-0013](decisions/ADR-0013-frontend-state-ui-tooling.md), [ADR-0014](decisions/ADR-0014-app-owned-shadcn-components.md).
 
 ```text
 docs/

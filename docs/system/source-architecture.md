@@ -3,8 +3,8 @@ doc_id: ENG-STANDARDS
 title: Cartasy Engineering Standards
 status: accepted
 owner: Cartasy Engineering
-last_updated: 2026-10-19
-version: 4.4.0
+last_updated: 2026-10-20
+version: 4.4.1
 source_of_truth: Cấu trúc source code, dependency direction và quy ước phát triển
 review_cycle: Khi đổi module, framework hoặc tooling
 ---
@@ -30,7 +30,6 @@ cartasy/
     contracts/              # OpenAPI và generated API types
     config/                 # typed config, tsconfig/eslint presets
     observability/          # log/metric/trace adapters
-    ui/                     # token và accessible primitive
     testkit/                # fixture/factory cho test
   infra/
     compose/                # dependency local
@@ -43,7 +42,7 @@ cartasy/
 
 Không có app import source của app khác. Public export của package nằm trong `package.json#exports`; cấm import `@cartasy/*/src/*`. `packages/testkit` chỉ là dev dependency.
 
-Web tổ chức route trong `app/[locale]`, UI message trong `apps/web/messages`, i18n routing ở `apps/web/src/i18n`; shared UI token/primitive trong `packages/ui`. Catalog/shop/CMS translations do module owner + database adapter sở hữu, không đặt JSON nội dung kinh doanh trong Web. API nhận locale explicit cho public read, Worker dùng locale/template version của recipient khi giao tiếp. [Web guide](../apps/web/README.md), [ADR-0012](../decisions/ADR-0012-multilingual-storefront.md).
+Web tổ chức route trong `app/[locale]`, UI message trong `apps/web/messages`, i18n routing ở `apps/web/src/i18n`; Web/Admin đặt source shadcn và token trong từng app theo [ADR-0014](../decisions/ADR-0014-app-owned-shadcn-components.md). Catalog/shop/CMS translations do module owner + database adapter sở hữu, không đặt JSON nội dung kinh doanh trong Web. API nhận locale explicit cho public read, Worker dùng locale/template version của recipient khi giao tiếp. [Web guide](../apps/web/README.md), [ADR-0012](../decisions/ADR-0012-multilingual-storefront.md).
 
 ## 3. Cấu trúc `packages/server/src`
 
@@ -220,11 +219,6 @@ packages/
   config/
     src/env/{api,worker,web,admin}.ts # parser theo process, public env allowlist
     src/presets/                  # tsconfig/eslint/build preset
-  ui/
-    components.json               # shadcn CLI aliases cho package
-    src/styles/                   # Tailwind import, token/theme foundation
-    src/components/ui/            # shadcn/ui bản Radix, accessible primitive
-    src/patterns/                 # composition thật sự dùng nhiều app
   observability/
     src/logging/                  # Pino/redaction/context
     src/metrics/                  # metric names và exporter adapter
@@ -235,13 +229,13 @@ packages/
     src/fixtures/                 # dữ liệu mô phỏng có nhãn
 ```
 
-`contracts` chỉ có wire schema/type, không import domain/database. `ui` không gọi API hoặc chứa chính sách order/price; app compose primitive thành feature. `config` chỉ parse/validate env, không xuất server secret vào browser. `observability` không ghi PII trong label/log. `testkit` chỉ là dev dependency, không đóng gói runtime. Chỉ trích xuất vào package chung khi ít nhất hai consumer thực sự cần cùng abstraction ổn định; mỗi package có public `exports`, không deep import.
+`contracts` chỉ có wire schema/type, không import domain/database. Web/Admin giữ component shadcn trong app và compose thành feature; không đặt chính sách order/price trong UI. `config` chỉ parse/validate env, không xuất server secret vào browser. `observability` không ghi PII trong label/log. `testkit` chỉ là dev dependency, không đóng gói runtime. Chỉ trích xuất vào package chung khi ít nhất hai consumer thực sự cần cùng abstraction ổn định; mỗi package có public `exports`, không deep import.
 
 ## 6. Ranh giới source của ứng dụng
 
 Cây `src`, route, state, API integration, biến môi trường và lệnh setup chi tiết chỉ do tài liệu ứng dụng sở hữu: [Web](../apps/web/README.md), [Admin chung Seller/Platform](../apps/admin/README.md), [API](../apps/api/README.md), [Worker](../apps/worker/README.md). Không sao chép lại cây app ở đây để tránh lệch khi triển khai.
 
-- `apps/web`, `apps/admin` là presentation adapter; chỉ import `contracts`, `ui`, config public và primitive phù hợp. `app` compose route; `features` thao tác; `entities` model trình bày; `widgets` tổ hợp; `shared` không biết domain.
+- `apps/web`, `apps/admin` là presentation adapter; chỉ import `contracts`, config public và component/primitive của chính app. `app` compose route; `features` thao tác; `entities` model trình bày; `widgets` tổ hợp; `shared` không biết domain.
 - `apps/api` là HTTP composition root Nest; controller/DTO/mapper/guard chỉ chuyển đổi boundary, không chứa SQL/state transition/tính tiền. Better Auth mount trước body parser.
 - `apps/worker` là background composition root; handler/scheduler gọi cùng use case ở `packages/server`, sử dụng outbox/inbox dedupe và không tạo biến thể rule.
 - `apps/admin` chứa route group `/seller/*` và `/platform/*` trong cùng source tree; không dùng chung authorization client cache key giữa hai workspace. API tiếp tục tách namespace seller/admin và kiểm RBAC + shop membership + thuộc tính tài nguyên ở application layer theo [ADR-0011](../decisions/ADR-0011-unified-admin-seller-workspace.md).
